@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/Button";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts, people } from "@/data/seed";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,8 @@ export default function HomePage() {
     <AppShell>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-4">
+          <OnboardingChecklist />
+
           <section className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card">
             <div className="flex items-center gap-3">
               <Avatar name={user?.name || "You"} />
