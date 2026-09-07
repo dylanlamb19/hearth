@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Ban, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
-import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/components/AuthProvider";
 import { personById } from "@/data/seed";
@@ -26,12 +25,12 @@ function resolveBlockedPerson(
   if (session && session.id === id) {
     return { id: session.id, name: session.name, handle: session.handle };
   }
-  // Fallback when id is a display name (legacy) or unknown seed id.
   const trimmed = id.trim();
-  const asHandle = trimmed
-    .toLowerCase()
-    .replace(/^@/, "")
-    .replace(/[^a-z0-9_]/g, "") || "unknown";
+  const asHandle =
+    trimmed
+      .toLowerCase()
+      .replace(/^@/, "")
+      .replace(/[^a-z0-9_]/g, "") || "unknown";
   return { id: trimmed, name: trimmed, handle: asHandle };
 }
 
@@ -101,8 +100,8 @@ export default function SettingsPage() {
           ) : blocked.length === 0 ? (
             <EmptyState
               icon={<Ban className="h-10 w-10" />}
-              title="No one blocked"
-              description="Your list is empty — a soft boundary when you need it, nothing to manage right now."
+              title="Nobody blocked"
+              description="A soft boundary when you need it — nothing to manage right now."
             />
           ) : (
             <ul className="space-y-3">
@@ -116,14 +115,13 @@ export default function SettingsPage() {
                     <p className="truncate font-medium text-ink-900">{person.name}</p>
                     <p className="truncate text-xs text-ink-400">@{person.handle}</p>
                   </div>
-                  <Button
+                  <button
                     type="button"
-                    variant="secondary"
-                    className="!px-4 !py-2 text-xs shrink-0"
                     onClick={() => handleUnblock(person.id, person.name)}
+                    className="shrink-0 px-2 py-1 text-xs font-medium text-ink-500 transition hover:text-ink-800"
                   >
                     Unblock
-                  </Button>
+                  </button>
                 </li>
               ))}
             </ul>
