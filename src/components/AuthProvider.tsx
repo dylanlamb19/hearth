@@ -1,7 +1,14 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { AUTH_COOKIE, DEMO_USER, SessionUser, decodeSession, encodeSession } from "@/lib/auth";
+import {
+  AUTH_COOKIE,
+  SessionUser,
+  decodeSession,
+  encodeSession,
+  resolveKnownUser,
+  withCanonicalIdentity,
+} from "@/lib/auth";
 import { handleFromName, normalizeHandle } from "@/lib/utils";
 
 type AuthContextValue = {
@@ -34,26 +41,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setUser(decodeSession(readCookie(AUTH_COOKIE)));
+    const decoded = decodeSession(readCookie(AUTH_COOKIE));
+    if (decoded) {
+      // Persist quiet Kindling rename (and other known crew) back into the cookie.
+      writeCookie(AUTH_COOKIE, encodeSession(decoded));
+    }
+    setUser(decoded);
     setReady(true);
   }, []);
 
   const login = useCallback((email: string, _password: string, name?: string, handle?: string) => {
     const normalized = email.trim().toLowerCase();
+    const known = resolveKnownUser(normalized);
+    if (known) {
+      writeCookie(AUTH_COOKIE, encodeSession(known));
+      setUser(known);
+      return known;
+    }
+
     const displayName = name?.trim() || normalized.split("@")[0] || "Friend";
     const nextHandle =
       (handle && normalizeHandle(handle)) ||
       handleFromName(name?.trim() ? name : displayName) ||
       "friend";
-    const next: SessionUser =
-      normalized === DEMO_USER.email
-        ? DEMO_USER
-        : {
-            id: "u-local",
-            name: displayName,
-            email: normalized,
-            handle: nextHandle,
-          };
+    const next = withCanonicalIdentity({
+      id: "u-local",
+      name: displayName,
+      email: normalized,
+      handle: nextHandle,
+    });
     writeCookie(AUTH_COOKIE, encodeSession(next));
     setUser(next);
     return next;
@@ -67,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = useCallback((patch: Partial<SessionUser>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const next = { ...prev, ...patch };
+      const next = withCanonicalIdentity({ ...prev, ...patch });
       writeCookie(AUTH_COOKIE, encodeSession(next));
       return next;
     });
@@ -76,11 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeOnboarding = useCallback((patch?: Partial<SessionUser>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const next: SessionUser = {
+      const next = withCanonicalIdentity({
         ...prev,
         ...patch,
         onboardingCompletedAt: new Date().toISOString(),
-      };
+      });
       writeCookie(AUTH_COOKIE, encodeSession(next));
       try {
         localStorage.setItem("hearth_checklist", "1");
