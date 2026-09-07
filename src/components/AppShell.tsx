@@ -16,6 +16,7 @@ const nav = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/moments", label: "Moments", icon: Sparkles },
   { href: "/friends", label: "Friends", icon: Users },
+  { href: "/people", label: "People", icon: Search },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/groups", label: "Groups", icon: UsersRound },
   { href: "/events", label: "Events", icon: Calendar },
@@ -101,6 +102,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="search"
               placeholder="Search Hearth"
               className="w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-sm shadow-soft ring-1 ring-ink-100 placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  router.push("/people");
+                }
+              }}
             />
           </div>
           <div className="ml-auto flex items-center gap-2">

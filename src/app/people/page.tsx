@@ -21,7 +21,6 @@ export default function PeoplePage() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     return people
-      .filter((p) => p.id !== user?.id && p.id !== "u-ember" || (user?.id !== "u-ember" && p.id !== user?.id))
       .filter((p) => p.id !== user?.id)
       .filter((p) => {
         if (!q) return true;
