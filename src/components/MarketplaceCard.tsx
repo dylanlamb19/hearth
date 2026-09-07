@@ -17,7 +17,10 @@ export function MarketplaceCard({ listing }: { listing: Listing }) {
             <h3 className="font-medium text-ink-900">{listing.title}</h3>
             <p className="mt-1 text-lg font-semibold text-ember-600">${listing.price}</p>
           </div>
-          <ReportMenu subject={listing.title} />
+          <ReportMenu
+            subject={seller?.name ?? listing.title}
+            subjectId={listing.sellerId}
+          />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-500">
           <span className="rounded-full bg-cream-200 px-2.5 py-1">{listing.condition}</span>

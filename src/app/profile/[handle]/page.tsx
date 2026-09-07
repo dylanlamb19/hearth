@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
+import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
 import { people, posts } from "@/data/seed";
 
@@ -61,14 +62,18 @@ export default function PublicProfilePage() {
                 <p className="text-sm text-ink-500">@{profile.handle}</p>
               </div>
             </div>
-            {isOwnProfile && (
-              <Link
-                href="/profile"
-                className="inline-flex items-center justify-center rounded-full bg-cream-100 px-5 py-2.5 text-sm font-medium text-ink-800 shadow-soft ring-1 ring-ink-100/80 transition hover:bg-cream-50 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400"
-              >
-                Your profile
-              </Link>
-            )}
+            <div className="flex items-center gap-2">
+              {isOwnProfile ? (
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center justify-center rounded-full bg-cream-100 px-5 py-2.5 text-sm font-medium text-ink-800 shadow-soft ring-1 ring-ink-100/80 transition hover:bg-cream-50 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400"
+                >
+                  Your profile
+                </Link>
+              ) : (
+                <ReportMenu subject={profile.name} subjectId={profile.id} />
+              )}
+            </div>
           </div>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-600">{profile.bio}</p>
           <div className="mt-4 rounded-2xl bg-cream-100 px-4 py-3 text-xs text-ink-600">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Plus, Sparkles } from "lucide-react";
+import { Bell, Flag, Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
@@ -57,21 +57,38 @@ export default function ProfilePage() {
           {isOwnProfile && (
             <div className="mt-4">
               <h2 className="text-sm font-medium text-ink-900">Settings</h2>
-              <Link
-                href="/help#notifications"
-                className="mt-2 flex items-center justify-between gap-3 rounded-2xl border border-ink-100 border-l-4 border-l-ember-300 bg-cream-50 px-4 py-3 transition hover:bg-cream-100"
-              >
-                <span className="flex items-center gap-3 min-w-0">
-                  <Bell className="h-4 w-4 shrink-0 text-ember-500" aria-hidden />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-ink-800">Notifications</span>
-                    <span className="block text-xs text-ink-500">
-                      Gentle pings for reacts, replies, and invites — nothing noisy.
+              <div className="mt-2 space-y-2">
+                <Link
+                  href="/help#notifications"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-ink-100 border-l-4 border-l-ember-300 bg-cream-50 px-4 py-3 transition hover:bg-cream-100"
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <Bell className="h-4 w-4 shrink-0 text-ember-500" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-ink-800">Notifications</span>
+                      <span className="block text-xs text-ink-500">
+                        Gentle pings for reacts, replies, and invites — nothing noisy.
+                      </span>
                     </span>
                   </span>
-                </span>
-                <span className="text-xs text-ink-400 shrink-0">Help</span>
-              </Link>
+                  <span className="text-xs text-ink-400 shrink-0">Help</span>
+                </Link>
+                <Link
+                  href="/help#report-block"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-ink-100 border-l-4 border-l-ember-300 bg-cream-50 px-4 py-3 transition hover:bg-cream-100"
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <Flag className="h-4 w-4 shrink-0 text-ember-500" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-ink-800">Report &amp; block</span>
+                      <span className="block text-xs text-ink-500">
+                        Calm tools on posts and profiles — no guilt, no red urgency.
+                      </span>
+                    </span>
+                  </span>
+                  <span className="text-xs text-ink-400 shrink-0">Help</span>
+                </Link>
+              </div>
             </div>
           )}
         </div>
