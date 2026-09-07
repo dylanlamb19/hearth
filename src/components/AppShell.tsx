@@ -10,6 +10,7 @@ import {
 import { Logo } from "./Logo";
 import { Avatar } from "./Avatar";
 import { useAuth } from "./AuthProvider";
+import { needsOnboarding } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -37,6 +38,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready && !user) router.replace("/login");
   }, [ready, user, router]);
+
+  useEffect(() => {
+    if (ready && user && needsOnboarding(user) && pathname !== "/welcome") {
+      router.replace("/welcome");
+    }
+  }, [ready, user, pathname, router]);
 
   useEffect(() => {
     setOpen(false);
