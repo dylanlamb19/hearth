@@ -10,6 +10,7 @@ import {
 import { Logo } from "./Logo";
 import { Avatar } from "./Avatar";
 import { useAuth } from "./AuthProvider";
+import { NotificationPermissionHost } from "./NotificationPermissionHost";
 import { needsOnboarding } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -156,6 +157,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
+
+      <NotificationPermissionHost />
     </div>
   );
 }
