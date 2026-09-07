@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
@@ -13,6 +13,8 @@ import { posts } from "@/data/seed";
 export default function ProfilePage() {
   const { user } = useAuth();
   const mine = posts.filter((p) => p.authorId === user?.id);
+  // This route is the signed-in user's own profile.
+  const isOwnProfile = Boolean(user);
 
   return (
     <AppShell>
@@ -30,7 +32,15 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button href="/home?compose=1">Post</Button>
+              {isOwnProfile && (
+                <Button
+                  href="/home?compose=1"
+                  className="bg-cream-100 text-ink-800 shadow-soft ring-1 ring-ink-100/80 hover:bg-cream-50 hover:text-ink-900"
+                >
+                  <Plus className="h-4 w-4 opacity-70" strokeWidth={2.25} aria-hidden />
+                  Share a Moment
+                </Button>
+              )}
               <Button variant="secondary">Edit profile</Button>
               <ReportMenu subject="your profile tools" />
             </div>
