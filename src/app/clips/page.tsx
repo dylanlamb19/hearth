@@ -232,7 +232,10 @@ export default function ClipsPage() {
 
       {/* Left-bottom creator + caption */}
       <div className="absolute bottom-10 left-4 z-30 max-w-[min(70%,18rem)] sm:left-[max(1rem,calc(50%-240px+1rem))]">
-        <Link href="/profile" className="inline-flex items-center gap-2.5">
+        <Link
+          href={author ? `/profile/${author.handle}` : "/profile"}
+          className="inline-flex items-center gap-2.5"
+        >
           {author && <Avatar name={author.name} size="sm" className="ring-2 ring-cream-100/40" />}
           <span className="text-sm font-medium text-cream-100 drop-shadow">@{author?.handle ?? "friend"}</span>
         </Link>
