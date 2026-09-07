@@ -36,7 +36,7 @@ export type Listing = {
   id: string;
   title: string;
   price: number;
-  condition: "Like new" | "Good" | "Fair";
+  condition: "New" | "Like new" | "Good" | "Fair";
   sellerId: string;
   distance: string;
   postedAt: string;
@@ -240,9 +240,9 @@ export const groups: Group[] = [
 ];
 
 export const events: EventItem[] = [
-  { id: "e1", title: "Porch soup night", when: "Sat · 6:00 PM", where: "Jordan's porch", going: 9, hostId: "u-jordan" },
-  { id: "e2", title: "Sunrise ridge walk", when: "Sun · 6:30 AM", where: "North trailhead", going: 6, hostId: "u-maya" },
-  { id: "e3", title: "Vinyl listening hour", when: "Fri · 8:00 PM", where: "Aria's living room", going: 11, hostId: "u-aria" },
+  { id: "e1", title: "Porch soup night", when: "Sat \u00b7 6:00 PM", where: "Jordan's porch", going: 9, hostId: "u-jordan" },
+  { id: "e2", title: "Sunrise ridge walk", when: "Sun \u00b7 6:30 AM", where: "North trailhead", going: 6, hostId: "u-maya" },
+  { id: "e3", title: "Vinyl listening hour", when: "Fri \u00b7 8:00 PM", where: "Aria's living room", going: 11, hostId: "u-aria" },
 ];
 
 export const conversations: Conversation[] = [
