@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Flag, Plus, Sparkles } from "lucide-react";
+import { Ban, Bell, Flag, Plus, Settings, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
@@ -56,8 +56,32 @@ export default function ProfilePage() {
 
           {isOwnProfile && (
             <div className="mt-4">
-              <h2 className="text-sm font-medium text-ink-900">Settings</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium text-ink-900">Settings</h2>
+                <Link
+                  href="/settings"
+                  className="inline-flex items-center gap-1.5 text-xs text-ink-400 transition hover:text-ink-700"
+                >
+                  <Settings className="h-3.5 w-3.5" aria-hidden />
+                  All settings
+                </Link>
+              </div>
               <div className="mt-2 space-y-2">
+                <Link
+                  href="/settings"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-ink-100 border-l-4 border-l-ember-300 bg-cream-50 px-4 py-3 transition hover:bg-cream-100"
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <Ban className="h-4 w-4 shrink-0 text-ember-500" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-ink-800">Blocked list</span>
+                      <span className="block text-xs text-ink-500">
+                        See who you’ve blocked — unblock anytime on this device.
+                      </span>
+                    </span>
+                  </span>
+                  <span className="text-xs text-ink-400 shrink-0">Open</span>
+                </Link>
                 <Link
                   href="/help#notifications"
                   className="flex items-center justify-between gap-3 rounded-2xl border border-ink-100 border-l-4 border-l-ember-300 bg-cream-50 px-4 py-3 transition hover:bg-cream-100"

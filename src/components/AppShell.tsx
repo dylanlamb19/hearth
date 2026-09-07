@@ -28,6 +28,7 @@ const nav = [
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/saved", label: "Saved", icon: Bookmark },
   { href: "/profile", label: "Profile", icon: UserRound },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -69,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       {nav.map((item) => {
         const Icon = item.icon;
-        const active = pathname === item.href;
+        const active = pathname === item.href || (item.href === "/settings" && pathname.startsWith("/settings"));
         return (
           <Link
             key={item.href}
@@ -134,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/profile" className="rounded-full p-1 hover:bg-cream-200" aria-label="Profile">
               <Avatar name={user.name} size="sm" />
             </Link>
-            <Link href="/help" className="hidden rounded-full p-2 text-ink-600 hover:bg-cream-200 sm:inline-flex" aria-label="Settings help">
+            <Link href="/settings" className="hidden rounded-full p-2 text-ink-600 hover:bg-cream-200 sm:inline-flex" aria-label="Settings">
               <Settings className="h-5 w-5" />
             </Link>
           </div>
