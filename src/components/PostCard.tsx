@@ -30,7 +30,7 @@ export function PostCard({ post }: { post: Post }) {
             </p>
           </div>
         </div>
-        <ReportMenu subject={author.name} />
+        <ReportMenu subject={author.name} subjectId={author.id} />
       </div>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-800">{post.body}</p>
       {post.image && (
