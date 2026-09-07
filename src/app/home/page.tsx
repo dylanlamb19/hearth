@@ -9,7 +9,7 @@ import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/Button";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
-import { posts, people } from "@/data/seed";
+import { posts as seedPosts, people, Post } from "@/data/seed";
 import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
@@ -33,12 +33,19 @@ function HearthMark({ className }: { className?: string }) {
 export default function HomePage() {
   const { user } = useAuth();
   const composerRef = useRef<HTMLInputElement>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [compose, setCompose] = useState(false);
   const [tab, setTab] = useState("For you");
   const [audience, setAudience] = useState<"friends" | "public">("friends");
+  const [draft, setDraft] = useState("");
+  const [mediaStub, setMediaStub] = useState<"photo" | "video" | null>(null);
+  const [feed, setFeed] = useState<Post[]>(seedPosts);
+  const [toast, setToast] = useState<string | null>(null);
   const birthdays = people.filter((p) => p.birthday);
   const suggestions = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id).slice(0, 3);
   const contacts = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id);
+
+  const canShare = draft.trim().length > 0 || mediaStub !== null;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -46,6 +53,48 @@ export default function HomePage() {
     setCompose(true);
     requestAnimationFrame(() => composerRef.current?.focus());
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  function showToast(message: string) {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  }
+
+  function handleShare() {
+    if (!canShare || !user) return;
+    const body =
+      draft.trim() ||
+      (mediaStub === "photo"
+        ? "Shared a photo by the hearth."
+        : mediaStub === "video"
+          ? "Shared a video by the hearth."
+          : "");
+    if (!body) return;
+
+    const next: Post = {
+      id: `local-${Date.now()}`,
+      authorId: user.id,
+      body,
+      createdAt: "Just now",
+      loves: 0,
+      comments: 0,
+      privacy: audience,
+      ...(mediaStub === "photo"
+        ? { image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1200&q=80" }
+        : {}),
+    };
+
+    setFeed((prev) => [next, ...prev]);
+    setDraft("");
+    setMediaStub(null);
+    showToast("Shared to the hearth.");
+  }
 
   return (
     <AppShell>
@@ -58,51 +107,96 @@ export default function HomePage() {
               <Avatar name={user?.name || "You"} />
               <input
                 ref={composerRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canShare) {
+                    e.preventDefault();
+                    handleShare();
+                  }
+                }}
                 placeholder={compose ? FIRST_MOMENT_PLACEHOLDER : "What is on your mind?"}
                 className="w-full rounded-full border-0 bg-cream-100 px-4 py-3 text-sm placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
+                aria-label="Compose a post"
               />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 hover:bg-cream-100">
+              <button
+                type="button"
+                onClick={() => setMediaStub((m) => (m === "photo" ? null : "photo"))}
+                aria-pressed={mediaStub === "photo"}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
+                  mediaStub === "photo" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
+                )}
+              >
                 <ImageIcon className="h-4 w-4 text-ember-500" /> Photo
               </button>
-              <button type="button" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 hover:bg-cream-100">
+              <button
+                type="button"
+                onClick={() => setMediaStub((m) => (m === "video" ? null : "video"))}
+                aria-pressed={mediaStub === "video"}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
+                  mediaStub === "video" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
+                )}
+              >
                 <Video className="h-4 w-4 text-ember-500" /> Video
               </button>
               <button type="button" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 hover:bg-cream-100">
                 <Smile className="h-4 w-4 text-ember-500" /> Feeling
               </button>
             </div>
-            <div className="mt-3 flex items-center gap-1.5" role="group" aria-label="Who can see this">
+            {mediaStub && (
+              <p className="mt-2 text-xs text-ink-400">
+                {mediaStub === "photo" ? "Photo attached (stub)." : "Video attached (stub)."} Image upload is a separate follow-up.
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5" role="group" aria-label="Who can see this">
+                <button
+                  type="button"
+                  onClick={() => setAudience("friends")}
+                  aria-pressed={audience === "friends"}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs transition",
+                    audience === "friends"
+                      ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
+                      : "text-ink-500 hover:bg-cream-100 hover:text-ink-700",
+                  )}
+                >
+                  Friends
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudience("public")}
+                  aria-pressed={audience === "public"}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs transition",
+                    audience === "public"
+                      ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
+                      : "text-ink-500 hover:bg-cream-100 hover:text-ink-700",
+                  )}
+                >
+                  Public
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setAudience("friends")}
-                aria-pressed={audience === "friends"}
+                onClick={handleShare}
+                disabled={!canShare}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-xs transition",
-                  audience === "friends"
-                    ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
-                    : "text-ink-500 hover:bg-cream-100 hover:text-ink-700",
+                  "inline-flex items-center justify-center rounded-full bg-cream-100 px-5 py-2 text-sm font-medium text-ink-800 shadow-soft ring-1 ring-ink-100/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400",
+                  canShare
+                    ? "hover:bg-cream-50 hover:text-ink-900 active:scale-[0.99]"
+                    : "cursor-not-allowed opacity-45",
                 )}
               >
-                Friends
-              </button>
-              <button
-                type="button"
-                onClick={() => setAudience("public")}
-                aria-pressed={audience === "public"}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs transition",
-                  audience === "public"
-                    ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
-                    : "text-ink-500 hover:bg-cream-100 hover:text-ink-700",
-                )}
-              >
-                Public
+                Share
               </button>
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-400">
-              Friends = people you’ve connected with. Public = anyone on Hearth.
+              Friends = people you've connected with. Public = anyone on Hearth.
             </p>
           </section>
 
@@ -122,7 +216,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          {posts.map((post) => (
+          {feed.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
 
@@ -183,6 +277,16 @@ export default function HomePage() {
           </section>
         </aside>
       </div>
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900/90 px-4 py-2 text-sm text-cream-50 shadow-soft"
+        >
+          {toast}
+        </div>
+      )}
     </AppShell>
   );
 }
