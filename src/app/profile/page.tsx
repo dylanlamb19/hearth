@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -13,8 +12,7 @@ import { posts } from "@/data/seed";
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [empty, setEmpty] = useState(false);
-  const mine = posts.slice(0, 2);
+  const mine = posts.filter((p) => p.authorId === user?.id);
 
   return (
     <AppShell>
@@ -47,13 +45,8 @@ export default function ProfilePage() {
       </section>
 
       <div className="mt-6 space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-medium text-ink-900">Moments</h2>
-          <Button variant="outline" onClick={() => setEmpty((v) => !v)}>
-            {empty ? "Show demo Moments" : "Preview empty state"}
-          </Button>
-        </div>
-        {empty ? (
+        <h2 className="font-medium text-ink-900">Moments</h2>
+        {mine.length === 0 ? (
           <EmptyState
             icon={<Sparkles className="h-10 w-10" />}
             title="No Moments yet"
