@@ -14,6 +14,7 @@ export function PostCard({ post }: { post: Post }) {
   if (!author) return null;
 
   const reactions = reactionsForPost(post.id);
+  const loveCount = reactions.length;
 
   return (
     <article className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card sm:p-5">
@@ -40,11 +41,11 @@ export function PostCard({ post }: { post: Post }) {
       <div className="mt-4 flex flex-wrap items-center gap-1 text-sm text-ink-500">
         <button
           type="button"
-          aria-label={`View ${post.loves} reactions`}
+          aria-label={`View ${loveCount} reactions`}
           onClick={() => setReactionsOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
         >
-          <Heart className="h-4 w-4" /> Love · {post.loves}
+          <Heart className="h-4 w-4" /> Love · {loveCount}
         </button>
         <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
           <MessageCircle className="h-4 w-4" /> Comment · {post.comments}
