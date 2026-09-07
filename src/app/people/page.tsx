@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, UserRound } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
 
-export default function PeoplePage() {
+function PeoplePageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
@@ -127,5 +127,19 @@ export default function PeoplePage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+export default function PeoplePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-cream-100 text-ink-500">
+          Warming the room…
+        </div>
+      }
+    >
+      <PeoplePageContent />
+    </Suspense>
   );
 }
