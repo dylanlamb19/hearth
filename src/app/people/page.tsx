@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, UserRound } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -10,13 +11,25 @@ import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
 import { cn } from "@/lib/utils";
 
-const INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
+const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
 
 export default function PeoplePage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [interest, setInterest] = useState<string | null>(null);
   const [following, setFollowing] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const q = searchParams.get("q") ?? "";
+    setQuery(q);
+  }, [searchParams]);
+
+  const chips = useMemo(() => {
+    const saved = user?.interests?.filter((c) => c.trim().length > 0) ?? [];
+    if (saved.length > 0) return saved;
+    return [...DEFAULT_INTERESTS];
+  }, [user?.interests]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -55,7 +68,7 @@ export default function PeoplePage() {
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        {INTERESTS.map((chip) => {
+        {chips.map((chip) => {
           const active = interest === chip;
           return (
             <button

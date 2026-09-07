@@ -114,7 +114,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  router.push("/people");
+                  const value = (e.target as HTMLInputElement).value.trim();
+                  router.push(
+                    value
+                      ? `/people?q=${encodeURIComponent(value)}`
+                      : "/people",
+                  );
                 }
               }}
             />
