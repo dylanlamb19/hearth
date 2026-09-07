@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   Heart,
@@ -14,6 +14,7 @@ import {
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/components/AuthProvider";
 import { clips, personById } from "@/data/seed";
+import { getBlockedIds } from "@/lib/blocked";
 import { cn } from "@/lib/utils";
 
 const MUTE_KEY = "hearth-clips-unmuted";
@@ -39,6 +40,14 @@ export default function ClipsPage() {
   const touchStartY = useRef<number | null>(null);
   const wheelLock = useRef(false);
 
+  // Re-read block list each render (client-only localStorage).
+  const blockedIds = new Set(getBlockedIds());
+  const visibleClips = useMemo(
+    () => clips.filter((c) => !blockedIds.has(c.authorId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional re-read via blockedKey
+    [[...blockedIds].sort().join(",")],
+  );
+
   useEffect(() => {
     if (ready && !user) router.replace("/login");
   }, [ready, user, router]);
@@ -52,9 +61,17 @@ export default function ClipsPage() {
     }
   }, []);
 
-  const total = clips.length;
-  const clip = clips[index];
+  const total = visibleClips.length;
+  const clip = visibleClips[index];
   const author = clip ? personById(clip.authorId) : undefined;
+
+  useEffect(() => {
+    if (total === 0) {
+      setIndex(0);
+      return;
+    }
+    setIndex((i) => Math.min(i, total - 1));
+  }, [total]);
 
   const go = useCallback(
     (delta: number) => {

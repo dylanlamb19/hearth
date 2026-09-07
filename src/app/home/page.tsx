@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
+import { getBlockedIds } from "@/lib/blocked";
 import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
@@ -43,9 +44,17 @@ export default function HomePage() {
   const [videoStub, setVideoStub] = useState(false);
   const [feed, setFeed] = useState<Post[]>(seedPosts);
   const [toast, setToast] = useState<string | null>(null);
-  const birthdays = people.filter((p) => p.birthday);
-  const suggestions = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id).slice(0, 3);
-  const contacts = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id);
+
+  // Re-read localStorage block list each render (free-tier, this device).
+  const blockedIds = new Set(getBlockedIds());
+  const visibleFeed = feed.filter((post) => !blockedIds.has(post.authorId));
+  const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
+  const suggestions = people
+    .filter((p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id))
+    .slice(0, 3);
+  const contacts = people.filter(
+    (p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id),
+  );
 
   const canShare = draft.trim().length > 0 || attachedImage !== null || videoStub;
 
@@ -273,7 +282,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          {feed.map((post) => (
+          {visibleFeed.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
 
