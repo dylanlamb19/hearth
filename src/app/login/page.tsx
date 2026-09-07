@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
+import { needsOnboarding } from "@/lib/auth";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -21,8 +22,12 @@ export default function LoginPage() {
       setError("Use a valid email and a password with at least 8 characters.");
       return;
     }
-    login(email, password);
-    router.push("/home");
+    const user = login(email, password);
+    if (needsOnboarding(user)) {
+      router.push("/welcome");
+    } else {
+      router.push("/home");
+    }
   }
 
   return (

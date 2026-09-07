@@ -28,7 +28,7 @@ export default function SignupPage() {
       return;
     }
     login(email, password, name);
-    router.push("/home");
+    router.push("/welcome");
   }
 
   return (
