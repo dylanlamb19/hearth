@@ -26,10 +26,31 @@ export default function LandingPage() {
               Hearth is a place for the people you already know — feed, friends, chat, groups, events, market, videos, and the small talk in between.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button href="/signup" variant="primary">Continue with Google</Button>
-              <Button href="/signup" variant="primary">Continue with X</Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="cursor-not-allowed opacity-60"
+                disabled
+                aria-disabled="true"
+                title="Coming soon"
+              >
+                Google · Coming soon
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="cursor-not-allowed opacity-60"
+                disabled
+                aria-disabled="true"
+                title="Coming soon"
+              >
+                X · Coming soon
+              </Button>
               <Button href="/signup" variant="outline">Email instead</Button>
             </div>
+            <p className="mt-3 text-sm text-ink-500">
+              Google and X are warming up — email works today.
+            </p>
             <p className="mt-4 text-sm text-ink-500">
               Already here? <Link href="/login" className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>
             </p>
