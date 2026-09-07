@@ -35,6 +35,7 @@ export default function HomePage() {
   const composerRef = useRef<HTMLInputElement>(null);
   const [compose, setCompose] = useState(false);
   const [tab, setTab] = useState("For you");
+  const [audience, setAudience] = useState<"friends" | "public">("friends");
   const birthdays = people.filter((p) => p.birthday);
   const suggestions = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id).slice(0, 3);
   const contacts = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id);
@@ -72,6 +73,37 @@ export default function HomePage() {
                 <Smile className="h-4 w-4 text-ember-500" /> Feeling
               </button>
             </div>
+            <div className="mt-3 flex items-center gap-1.5" role="group" aria-label="Who can see this">
+              <button
+                type="button"
+                onClick={() => setAudience("friends")}
+                aria-pressed={audience === "friends"}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs transition",
+                  audience === "friends"
+                    ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
+                    : "text-ink-500 hover:bg-cream-100 hover:text-ink-700",
+                )}
+              >
+                Friends
+              </button>
+              <button
+                type="button"
+                onClick={() => setAudience("public")}
+                aria-pressed={audience === "public"}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs transition",
+                  audience === "public"
+                    ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
+                    : "text-ink-500 hover:bg-cream-100 hover:text-ink-700",
+                )}
+              >
+                Public
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-400">
+              Friends = people you’ve connected with. Public = anyone on Hearth.
+            </p>
           </section>
 
           <div className="flex flex-wrap gap-2">
