@@ -5,12 +5,18 @@ import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
 import { Button } from "./Button";
 import { addBlockedId } from "@/lib/blocked";
 
-const REPORT_REASONS = ["Spam", "Harassment", "Impersonation", "Something else"] as const;
+const REPORT_REASONS = [
+  "Spam",
+  "Harassment",
+  "Hate",
+  "Scam / unsafe listing",
+  "Other",
+] as const;
 type ReportReason = (typeof REPORT_REASONS)[number];
 
 type Sheet =
-  | { kind: "report"; reason: ReportReason | null }
-  | { kind: "report-thanks"; reason: ReportReason }
+  | { kind: "report"; reason: ReportReason | null; note: string }
+  | { kind: "report-thanks" }
   | { kind: "block-confirm" }
   | { kind: "block-done" };
 
@@ -36,7 +42,7 @@ export function ReportMenu({
 
   function openReport() {
     setMenuOpen(false);
-    setSheet({ kind: "report", reason: null });
+    setSheet({ kind: "report", reason: null, note: "" });
   }
 
   function openBlock() {
@@ -46,7 +52,17 @@ export function ReportMenu({
 
   function confirmReport() {
     if (sheet?.kind !== "report" || !sheet.reason) return;
-    setSheet({ kind: "report-thanks", reason: sheet.reason });
+    try {
+      console.info("[hearth report]", {
+        subject,
+        subjectId,
+        reason: sheet.reason,
+        note: sheet.note.trim() || undefined,
+      });
+    } catch {
+      /* ignore */
+    }
+    setSheet({ kind: "report-thanks" });
   }
 
   function confirmBlock() {
@@ -89,7 +105,7 @@ export function ReportMenu({
       {sheet?.kind === "report" && (
         <CreamSheet
           title="Report"
-          description={`Tell us what feels off about ${subject}. We review quietly — no drama, no guilt.`}
+          description={`Tell us what feels off about ${subject}. We review quietly — no drama.`}
           onClose={() => setSheet(null)}
         >
           <div className="mt-4 flex flex-wrap gap-2">
@@ -99,7 +115,7 @@ export function ReportMenu({
                 <button
                   key={reason}
                   type="button"
-                  onClick={() => setSheet({ kind: "report", reason })}
+                  onClick={() => setSheet({ ...sheet, reason })}
                   className={
                     selected
                       ? "rounded-full bg-cream-100 px-3.5 py-2 text-sm font-medium text-ink-800 shadow-soft ring-1 ring-ember-300"
@@ -111,6 +127,17 @@ export function ReportMenu({
               );
             })}
           </div>
+          <label className="mt-4 block text-left text-sm">
+            <span className="mb-1.5 block text-ink-500">Optional note</span>
+            <textarea
+              value={sheet.note}
+              onChange={(e) => setSheet({ ...sheet, note: e.target.value })}
+              rows={2}
+              maxLength={280}
+              placeholder="Anything else we should know?"
+              className="w-full rounded-2xl border-ink-200 bg-white px-3 py-2 text-sm text-ink-800 focus:border-ember-400 focus:ring-ember-300"
+            />
+          </label>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
@@ -132,13 +159,10 @@ export function ReportMenu({
 
       {sheet?.kind === "report-thanks" && (
         <CreamSheet
-          title="Thank you"
-          description={`We received your note about ${subject}. Our team reviews reports quietly. You stay in control of who you see.`}
+          title="Thanks"
+          description="Thanks — we’ll review quietly."
           onClose={() => setSheet(null)}
         >
-          <p className="mt-3 text-xs text-ink-400">
-            Reason: {sheet.reason}. Hearth is for people you already know.
-          </p>
           <Button className="mt-5 w-full" onClick={() => setSheet(null)}>
             Close
           </Button>
@@ -148,7 +172,7 @@ export function ReportMenu({
       {sheet?.kind === "block-confirm" && (
         <CreamSheet
           title={`Block ${subject}?`}
-          description="You won’t see them in your feed or chat. You can always revisit this later."
+          description={`Block ${subject}? They won’t show up in your feed or search.`}
           onClose={() => setSheet(null)}
         >
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
@@ -157,7 +181,7 @@ export function ReportMenu({
               onClick={() => setSheet(null)}
               className="order-2 rounded-full px-4 py-2.5 text-sm font-medium text-ink-600 transition hover:bg-cream-100 hover:text-ink-800 sm:order-1"
             >
-              Not now
+              Cancel
             </button>
             <Button className="order-1 w-full sm:order-2 sm:w-auto" onClick={confirmBlock}>
               Block
@@ -167,14 +191,8 @@ export function ReportMenu({
       )}
 
       {sheet?.kind === "block-done" && (
-        <CreamSheet
-          title="Blocked"
-          description={`${subject} won’t show up in your feed or chat on this device.`}
-          onClose={() => setSheet(null)}
-        >
-          <p className="mt-3 text-xs text-ink-400">
-            Soft boundary, not a scare. Your space stays yours.
-          </p>
+        <CreamSheet title="Blocked" description="Blocked." onClose={() => setSheet(null)}>
+          <p className="mt-3 text-xs text-ink-400">They won’t show up in your feed or search on this device.</p>
           <Button className="mt-5 w-full" onClick={() => setSheet(null)}>
             Done
           </Button>
