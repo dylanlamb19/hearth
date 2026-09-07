@@ -49,7 +49,7 @@ export default function HomePage() {
   return (
     <AppShell>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-4 pb-20">
+        <div className="space-y-4">
           <OnboardingChecklist />
 
           <section className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card">
@@ -93,6 +93,8 @@ export default function HomePage() {
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
+
+          <div className="h-16" aria-hidden />
 
           <div className="sticky bottom-4 z-20 pt-2">
             <Link

@@ -30,6 +30,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button href="/home?compose=1">Post</Button>
               <Button variant="secondary">Edit profile</Button>
               <ReportMenu subject="your profile tools" />
             </div>
