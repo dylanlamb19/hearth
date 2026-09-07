@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, Sparkles, Users, MessageCircle, UsersRound, Calendar,
-  Store, Clapperboard, Bell, Bookmark, UserRound, Search, Menu, X, LogOut, Settings,
+  Store, Clapperboard, Film, Bell, Bookmark, UserRound, Search, Menu, X, LogOut, Settings,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { Avatar } from "./Avatar";
@@ -21,6 +21,7 @@ const nav = [
   { href: "/groups", label: "Groups", icon: UsersRound },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/marketplace", label: "Marketplace", icon: Store },
+  { href: "/clips", label: "Clips", icon: Film },
   { href: "/videos", label: "Videos", icon: Clapperboard },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/saved", label: "Saved", icon: Bookmark },
