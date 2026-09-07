@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Image as ImageIcon, Video, Smile } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -11,13 +12,22 @@ import { posts, people } from "@/data/seed";
 import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
+const FIRST_MOMENT_PLACEHOLDER = "What's happening by the hearth?";
 
 export default function HomePage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const compose = searchParams.get("compose") === "1";
+  const composerRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState("For you");
   const birthdays = people.filter((p) => p.birthday);
   const suggestions = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id).slice(0, 3);
   const contacts = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id);
+
+  useEffect(() => {
+    if (!compose) return;
+    composerRef.current?.focus();
+  }, [compose]);
 
   return (
     <AppShell>
@@ -27,7 +37,8 @@ export default function HomePage() {
             <div className="flex items-center gap-3">
               <Avatar name={user?.name || "You"} />
               <input
-                placeholder="What is on your mind?"
+                ref={composerRef}
+                placeholder={compose ? FIRST_MOMENT_PLACEHOLDER : "What is on your mind?"}
                 className="w-full rounded-full border-0 bg-cream-100 px-4 py-3 text-sm placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
               />
             </div>

@@ -59,7 +59,7 @@ export default function ProfilePage() {
             title="No Moments yet"
             description="Share something quiet from your day — a photo, a thought, a porch update."
             actionLabel="Share a first Moment"
-            actionHref="/home"
+            actionHref="/home?compose=1"
           />
         ) : (
           mine.map((post) => <PostCard key={post.id} post={post} />)
