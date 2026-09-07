@@ -19,6 +19,10 @@ import { cn } from "@/lib/utils";
 const MUTE_KEY = "hearth-clips-unmuted";
 const SWIPE_THRESHOLD = 48;
 
+/** Soft cream pill — readable over dark video without neon glow */
+const creamChrome =
+  "inline-flex h-11 w-11 items-center justify-center rounded-full bg-cream-100/90 text-ink-800 shadow-[0_2px_10px_rgba(12,10,8,0.42)] ring-1 ring-ink-900/10 backdrop-blur-sm";
+
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
   return String(n);
@@ -144,7 +148,7 @@ export default function ClipsPage() {
       <div className="relative flex min-h-screen flex-col items-center justify-center bg-ink-950 px-6 text-center">
         <Link
           href="/home"
-          className="absolute left-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/60 text-cream-100 backdrop-blur"
+          className={cn("absolute left-4 top-4 z-20", creamChrome)}
           aria-label="Back to home"
         >
           <ChevronLeft className="h-6 w-6" />
@@ -198,11 +202,11 @@ export default function ClipsPage() {
         </div>
       </div>
 
-      {/* Top chrome */}
+      {/* Top chrome — cream pills, readable over video */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <Link
           href="/home"
-          className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/50 text-cream-100 shadow-[0_0_20px_rgba(249,247,242,0.12)] backdrop-blur"
+          className={cn("pointer-events-auto", creamChrome)}
           aria-label="Back to home"
         >
           <ChevronLeft className="h-6 w-6" />
@@ -210,14 +214,14 @@ export default function ClipsPage() {
         <button
           type="button"
           onClick={toggleMute}
-          className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/50 text-cream-100 shadow-[0_0_20px_rgba(249,247,242,0.12)] backdrop-blur"
+          className={cn("pointer-events-auto", creamChrome)}
           aria-label={muted ? "Unmute" : "Mute"}
         >
           {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Right rail — stubs */}
+      {/* Right rail — cream fill + ink icons, soft dark wash (no neon) */}
       <div className="absolute bottom-28 right-3 z-30 flex flex-col items-center gap-5 sm:right-[max(0.75rem,calc(50%-240px+0.75rem))]">
         <RailButton label={formatCount(clip.likes)} ariaLabel="Like">
           <Heart className="h-6 w-6" />
@@ -265,12 +269,14 @@ function RailButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 text-cream-100"
+      className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1"
     >
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/40 text-cream-100 shadow-[0_0_18px_rgba(249,247,242,0.18)] backdrop-blur transition hover:bg-ink-900/60">
+      <span className={cn(creamChrome, "transition hover:bg-cream-100")}>
         {children}
       </span>
-      <span className="text-[11px] font-medium text-cream-100/80 drop-shadow">{label}</span>
+      <span className="text-[11px] font-medium text-cream-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
+        {label}
+      </span>
     </button>
   );
 }
