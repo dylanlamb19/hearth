@@ -80,6 +80,16 @@ export type VideoItem = {
   thumb: string;
 };
 
+export type Clip = {
+  id: string;
+  authorId: string;
+  caption: string;
+  videoUrl: string;
+  likes: number;
+  comments: number;
+  thumb?: string;
+};
+
 export const people: Person[] = [
   { id: "u-ember", name: "Ember", handle: "ember", bio: "Keeping the lights low and the kettle on.", mutuals: 0, online: true },
   { id: "u-maya", name: "Maya Chen", handle: "maya", bio: "Trail notes and quiet mornings.", mutuals: 12, online: true, birthday: "Today" },
@@ -216,6 +226,64 @@ export const videos: VideoItem[] = [
   { id: "v1", title: "Making bread without rushing", authorId: "u-jordan", duration: "8:12", views: "1.2k", thumb: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=80" },
   { id: "v2", title: "A slow walk after rain", authorId: "u-maya", duration: "4:40", views: "860", thumb: "https://images.unsplash.com/photo-1439405326854-014607f694d7?w=800&q=80" },
   { id: "v3", title: "Rearranging the living room", authorId: "u-nova", duration: "6:05", views: "2.1k", thumb: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80" },
+];
+
+/** Vertical shorts stubs — public sample mp4s that play reliably. */
+export const clips: Clip[] = [
+  {
+    id: "clip1",
+    authorId: "u-maya",
+    caption: "Mist on the ridge this morning. Left the phone in the car for once.",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    likes: 128,
+    comments: 14,
+    thumb: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=80",
+  },
+  {
+    id: "clip2",
+    authorId: "u-jordan",
+    caption: "Sunday stew simmer — come by after six if you are free.",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    likes: 86,
+    comments: 9,
+    thumb: "https://images.unsplash.com/photo-1478144592103-53e28a4a4aa3?w=600&q=80",
+  },
+  {
+    id: "clip3",
+    authorId: "u-sam",
+    caption: "Porch light, vinyl crackle, and a bike that needs a new basket.",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    likes: 204,
+    comments: 22,
+    thumb: "https://images.unsplash.com/photo-1485965120184-aafb341778c0?w=600&q=80",
+  },
+  {
+    id: "clip4",
+    authorId: "u-nova",
+    caption: "Small rooms can hold a lot — candles, soft jazz, finished table.",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    likes: 312,
+    comments: 31,
+    thumb: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80",
+  },
+  {
+    id: "clip5",
+    authorId: "u-leo",
+    caption: "Weekend market finds and a sketchbook that finally filled a page.",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    likes: 67,
+    comments: 5,
+    thumb: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
+  },
+  {
+    id: "clip6",
+    authorId: "u-aria",
+    caption: "Listening room hour — sit still, let the album finish.",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+    likes: 151,
+    comments: 18,
+    thumb: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&q=80",
+  },
 ];
 
 export const savedIds = ["p2", "p4", "l2"];
