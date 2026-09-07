@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Image as ImageIcon, Video, Smile } from "lucide-react";
+import { Image as ImageIcon, Video, Smile, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { PostCard } from "@/components/PostCard";
@@ -33,19 +33,21 @@ function HearthMark({ className }: { className?: string }) {
 export default function HomePage() {
   const { user } = useAuth();
   const composerRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [compose, setCompose] = useState(false);
   const [tab, setTab] = useState("For you");
   const [audience, setAudience] = useState<"friends" | "public">("friends");
   const [draft, setDraft] = useState("");
-  const [mediaStub, setMediaStub] = useState<"photo" | "video" | null>(null);
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [videoStub, setVideoStub] = useState(false);
   const [feed, setFeed] = useState<Post[]>(seedPosts);
   const [toast, setToast] = useState<string | null>(null);
   const birthdays = people.filter((p) => p.birthday);
   const suggestions = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id).slice(0, 3);
   const contacts = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id);
 
-  const canShare = draft.trim().length > 0 || mediaStub !== null;
+  const canShare = draft.trim().length > 0 || attachedImage !== null || videoStub;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,19 +62,42 @@ export default function HomePage() {
     };
   }, []);
 
+  function revokeIfObjectUrl(url: string | null) {
+    if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+  }
+
+  function clearAttachedImage() {
+    setAttachedImage((prev) => {
+      revokeIfObjectUrl(prev);
+      return null;
+    });
+  }
+
   function showToast(message: string) {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2800);
   }
 
+  function handlePhotoPick(files: FileList | null) {
+    const file = files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    setAttachedImage((prev) => {
+      revokeIfObjectUrl(prev);
+      return url;
+    });
+    setVideoStub(false);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  }
+
   function handleShare() {
     if (!canShare || !user) return;
     const body =
       draft.trim() ||
-      (mediaStub === "photo"
+      (attachedImage
         ? "Shared a photo by the hearth."
-        : mediaStub === "video"
+        : videoStub
           ? "Shared a video by the hearth."
           : "");
     if (!body) return;
@@ -85,14 +110,14 @@ export default function HomePage() {
       loves: 0,
       comments: 0,
       privacy: audience,
-      ...(mediaStub === "photo"
-        ? { image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1200&q=80" }
-        : {}),
+      ...(attachedImage ? { image: attachedImage } : {}),
     };
 
     setFeed((prev) => [next, ...prev]);
     setDraft("");
-    setMediaStub(null);
+    // Keep object URL alive for the feed card; only clear composer state.
+    setAttachedImage(null);
+    setVideoStub(false);
     showToast("Shared to the hearth.");
   }
 
@@ -123,22 +148,36 @@ export default function HomePage() {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => setMediaStub((m) => (m === "photo" ? null : "photo"))}
-                aria-pressed={mediaStub === "photo"}
+                onClick={() => photoInputRef.current?.click()}
+                aria-pressed={attachedImage !== null}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
-                  mediaStub === "photo" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
+                  attachedImage
+                    ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
+                    : "text-ink-600",
                 )}
               >
                 <ImageIcon className="h-4 w-4 text-ember-500" /> Photo
               </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden
+                onChange={(e) => handlePhotoPick(e.target.files)}
+              />
               <button
                 type="button"
-                onClick={() => setMediaStub((m) => (m === "video" ? null : "video"))}
-                aria-pressed={mediaStub === "video"}
+                onClick={() => {
+                  setVideoStub((v) => !v);
+                  if (!videoStub) clearAttachedImage();
+                }}
+                aria-pressed={videoStub}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
-                  mediaStub === "video" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
+                  videoStub ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
                 )}
               >
                 <Video className="h-4 w-4 text-ember-500" /> Video
@@ -147,10 +186,28 @@ export default function HomePage() {
                 <Smile className="h-4 w-4 text-ember-500" /> Feeling
               </button>
             </div>
-            {mediaStub && (
-              <p className="mt-2 text-xs text-ink-400">
-                {mediaStub === "photo" ? "Photo attached (stub)." : "Video attached (stub)."} Image upload is a separate follow-up.
-              </p>
+            {attachedImage && (
+              <div className="mt-3">
+                <div className="relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={attachedImage}
+                    alt="Selected photo preview"
+                    className="h-20 w-20 rounded-2xl object-cover ring-1 ring-ink-100 bg-cream-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearAttachedImage}
+                    aria-label="Remove photo"
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-cream-100 text-ink-700 shadow-soft ring-1 ring-ink-100 transition hover:bg-cream-50 hover:text-ink-900"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+              </div>
+            )}
+            {videoStub && !attachedImage && (
+              <p className="mt-2 text-xs text-ink-400">Video attached (stub). Upload comes later.</p>
             )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5" role="group" aria-label="Who can see this">
