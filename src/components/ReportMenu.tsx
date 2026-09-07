@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
 import { Button } from "./Button";
 import { addBlockedId } from "@/lib/blocked";
@@ -193,7 +193,7 @@ function CreamSheet({
   title: string;
   description: string;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div
