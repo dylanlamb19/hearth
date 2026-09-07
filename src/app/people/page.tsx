@@ -9,6 +9,7 @@ import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
+import { getBlockedIds } from "@/lib/blocked";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
@@ -31,10 +32,14 @@ function PeoplePageContent() {
     return [...DEFAULT_INTERESTS];
   }, [user?.interests]);
 
+  // Re-read block list each render so unblock in Settings is reflected on return.
+  const blockedIds = new Set(getBlockedIds());
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     return people
       .filter((p) => p.id !== user?.id)
+      .filter((p) => !blockedIds.has(p.id))
       .filter((p) => {
         if (!q) return true;
         return (
@@ -47,7 +52,9 @@ function PeoplePageContent() {
         if (!interest) return true;
         return p.bio.toLowerCase().includes(interest.toLowerCase());
       });
-  }, [query, interest, user?.id]);
+    // blockedIds rebuilt each render; serialize for stable memo deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional re-read via blockedKey
+  }, [query, interest, user?.id, [...blockedIds].sort().join(",")]);
 
   return (
     <AppShell>
