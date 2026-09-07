@@ -9,15 +9,15 @@ import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
-import { people, posts } from "@/data/seed";
+import { personByHandle, posts, resolveHandle } from "@/data/seed";
 
 export default function PublicProfilePage() {
   const params = useParams<{ handle: string }>();
-  const handle = (params?.handle || "").toLowerCase();
+  const handle = resolveHandle(params?.handle || "");
   const { user } = useAuth();
 
-  const seeded = people.find((p) => p.handle.toLowerCase() === handle);
-  const isSessionMatch = Boolean(user && user.handle.toLowerCase() === handle);
+  const seeded = personByHandle(handle);
+  const isSessionMatch = Boolean(user && resolveHandle(user.handle) === handle);
 
   const profile = seeded
     ? { id: seeded.id, name: seeded.name, handle: seeded.handle, bio: seeded.bio }

@@ -97,6 +97,7 @@ export type Clip = {
 
 export const people: Person[] = [
   { id: "u-ember", name: "Ember", handle: "ember", bio: "Keeping the lights low and the kettle on.", mutuals: 0, online: true },
+  { id: "u-kindling", name: "Kindling", handle: "kindling", bio: "Soft invites. One seat at a time.", mutuals: 0, online: true },
   { id: "u-maya", name: "Maya Chen", handle: "maya", bio: "Trail notes and quiet mornings.", mutuals: 12, online: true, birthday: "Today" },
   { id: "u-jordan", name: "Jordan Hale", handle: "jordan", bio: "Cooks for friends. Rarely posts.", mutuals: 8, online: false },
   { id: "u-sam", name: "Sam Rivera", handle: "sam", bio: "Vinyl, bikes, and porch light.", mutuals: 5, online: true },
@@ -104,6 +105,17 @@ export const people: Person[] = [
   { id: "u-leo", name: "Leo Brooks", handle: "leo", bio: "Weekend markets and sketchbooks.", mutuals: 7, online: true },
   { id: "u-aria", name: "Aria Quinn", handle: "aria", bio: "Listening rooms and long walks.", mutuals: 4, online: false },
 ];
+
+/** Legacy email-local-part handles that resolve to a seeded person. */
+export const handleAliases: Record<string, string> = {
+  kindlinghearthcrew: "kindling",
+  "kindling.hearth.crew": "kindling",
+};
+
+export function resolveHandle(raw: string): string {
+  const key = (raw || "").trim().toLowerCase();
+  return handleAliases[key] || key.replace(/[^a-z0-9_]/g, "") || key;
+}
 
 export const posts: Post[] = [
   {
@@ -240,9 +252,9 @@ export const groups: Group[] = [
 ];
 
 export const events: EventItem[] = [
-  { id: "e1", title: "Porch soup night", when: "Sat \u00b7 6:00 PM", where: "Jordan's porch", going: 9, hostId: "u-jordan" },
-  { id: "e2", title: "Sunrise ridge walk", when: "Sun \u00b7 6:30 AM", where: "North trailhead", going: 6, hostId: "u-maya" },
-  { id: "e3", title: "Vinyl listening hour", when: "Fri \u00b7 8:00 PM", where: "Aria's living room", going: 11, hostId: "u-aria" },
+  { id: "e1", title: "Porch soup night", when: "Sat · 6:00 PM", where: "Jordan's porch", going: 9, hostId: "u-jordan" },
+  { id: "e2", title: "Sunrise ridge walk", when: "Sun · 6:30 AM", where: "North trailhead", going: 6, hostId: "u-maya" },
+  { id: "e3", title: "Vinyl listening hour", when: "Fri · 8:00 PM", where: "Aria's living room", going: 11, hostId: "u-aria" },
 ];
 
 export const conversations: Conversation[] = [
@@ -326,6 +338,11 @@ export const savedIds = ["p2", "p4", "l2"];
 
 export function personById(id: string) {
   return people.find((p) => p.id === id);
+}
+
+export function personByHandle(raw: string) {
+  const handle = resolveHandle(raw);
+  return people.find((p) => p.handle.toLowerCase() === handle);
 }
 
 export function reactionsForPost(postId: string): PostReaction[] {
