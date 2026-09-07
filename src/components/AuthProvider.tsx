@@ -8,6 +8,8 @@ type AuthContextValue = {
   ready: boolean;
   login: (email: string, password: string, name?: string) => SessionUser;
   logout: () => void;
+  updateUser: (patch: Partial<SessionUser>) => void;
+  completeOnboarding: (patch?: Partial<SessionUser>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,7 +58,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, ready, login, logout }), [user, ready, login, logout]);
+  const updateUser = useCallback((patch: Partial<SessionUser>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      writeCookie(AUTH_COOKIE, encodeSession(next));
+      return next;
+    });
+  }, []);
+
+  const completeOnboarding = useCallback((patch?: Partial<SessionUser>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next: SessionUser = {
+        ...prev,
+        ...patch,
+        onboardingCompletedAt: new Date().toISOString(),
+      };
+      writeCookie(AUTH_COOKIE, encodeSession(next));
+      try {
+        localStorage.setItem("hearth_checklist", "1");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, ready, login, logout, updateUser, completeOnboarding }),
+    [user, ready, login, logout, updateUser, completeOnboarding],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
