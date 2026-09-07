@@ -110,7 +110,7 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
             </p>
 
             <div className="mt-4 rounded-2xl bg-cream-100 px-3.5 py-3 ring-1 ring-ink-100/80">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">Your link</p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">Your invite link</p>
               <p className="mt-1 break-all font-mono text-xs leading-relaxed text-ink-800 sm:text-sm">
                 {inviteLink || "..."}
               </p>
