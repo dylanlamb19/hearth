@@ -2,17 +2,18 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { AUTH_COOKIE, DEMO_USER, SessionUser, decodeSession, encodeSession } from "@/lib/auth";
+import { handleFromName, normalizeHandle } from "@/lib/utils";
 
 type AuthContextValue = {
   user: SessionUser | null;
   ready: boolean;
-  login: (email: string, password: string, name?: string) => SessionUser;
+  login: (email: string, password: string, name?: string, handle?: string) => SessionUser;
   logout: () => void;
-  updateUser: (patch: Partial<SessionUser>) => void;
-  completeOnboarding: (patch?: Partial<SessionUser>) => void;
+  updateUser: (patch: Partial\u003cSessionUser\u003e) => void;
+  completeOnboarding: (patch?: Partial\u003cSessionUser\u003e) => void;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext\u003cAuthContextValue | null\u003e(null);
 
 function readCookie(name: string) {
   if (typeof document === "undefined") return null;
@@ -29,7 +30,7 @@ function clearCookie(name: string) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const [user, setUser] = useState\u003cSessionUser | null\u003e(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -37,16 +38,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setReady(true);
   }, []);
 
-  const login = useCallback((email: string, _password: string, name?: string) => {
+  const login = useCallback((email: string, _password: string, name?: string, handle?: string) => {
     const normalized = email.trim().toLowerCase();
+    const displayName = name?.trim() || normalized.split("@")[0] || "Friend";
+    // Prefer explicit handle or display name — avoid treating raw email as the handle source when a name is given.
+    const nextHandle =
+      (handle && normalizeHandle(handle)) ||
+      handleFromName(name?.trim() ? name : displayName) ||
+      "friend";
     const next: SessionUser =
       normalized === DEMO_USER.email
         ? DEMO_USER
         : {
             id: "u-local",
-            name: name?.trim() || normalized.split("@")[0] || "Friend",
+            name: displayName,
             email: normalized,
-            handle: (name?.trim() || normalized.split("@")[0] || "friend").toLowerCase().replace(/\s+/g, ""),
+            handle: nextHandle,
           };
     writeCookie(AUTH_COOKIE, encodeSession(next));
     setUser(next);
@@ -58,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const updateUser = useCallback((patch: Partial<SessionUser>) => {
+  const updateUser = useCallback((patch: Partial\u003cSessionUser\u003e) => {
     setUser((prev) => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };
@@ -67,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const completeOnboarding = useCallback((patch?: Partial<SessionUser>) => {
+  const completeOnboarding = useCallback((patch?: Partial\u003cSessionUser\u003e) => {
     setUser((prev) => {
       if (!prev) return prev;
       const next: SessionUser = {
@@ -89,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({ user, ready, login, logout, updateUser, completeOnboarding }),
     [user, ready, login, logout, updateUser, completeOnboarding],
   );
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return \u003cAuthContext.Provider value={value}\u003e{children}\u003c/AuthContext.Provider\u003e;
 }
 
 export function useAuth() {
