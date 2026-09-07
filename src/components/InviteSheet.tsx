@@ -19,7 +19,9 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
 
   const code = useMemo(() => {
     if (!open) return "";
-    return getOrCreateInviteCode(user?.handle || user?.id || "friend");
+    const seed = user?.handle || user?.id || "friend";
+    const userId = user?.id || user?.handle || null;
+    return getOrCreateInviteCode(seed, userId);
   }, [open, user?.handle, user?.id]);
 
   const inviteLink = useMemo(() => (code ? buildInviteUrl(code) : ""), [code]);
