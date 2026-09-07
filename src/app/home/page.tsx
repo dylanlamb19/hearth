@@ -188,20 +188,20 @@ export default function HomePage() {
             </div>
             {attachedImage && (
               <div className="mt-3">
-                <div className="relative inline-block">
+                <div className="relative inline-block rounded-2xl bg-cream-100 p-1 ring-1 ring-ink-100/80">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={attachedImage}
                     alt="Selected photo preview"
-                    className="h-20 w-20 rounded-2xl object-cover ring-1 ring-ink-100 bg-cream-100"
+                    className="h-24 w-24 rounded-xl object-cover"
                   />
                   <button
                     type="button"
                     onClick={clearAttachedImage}
                     aria-label="Remove photo"
-                    className="absolute -right-1.5 -top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-cream-100 text-ink-700 shadow-soft ring-1 ring-ink-100 transition hover:bg-cream-50 hover:text-ink-900"
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-cream-50 text-ink-600 shadow-soft ring-1 ring-ink-100 transition hover:bg-cream-100 hover:text-ink-900"
                   >
-                    <X className="h-3.5 w-3.5" aria-hidden />
+                    <X className="h-3 w-3" aria-hidden />
                   </button>
                 </div>
               </div>
