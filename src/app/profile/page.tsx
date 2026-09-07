@@ -80,7 +80,7 @@ export default function ProfilePage() {
                   <span className="flex items-center gap-3 min-w-0">
                     <Flag className="h-4 w-4 shrink-0 text-ember-500" aria-hidden />
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-ink-800">Report &amp; block</span>
+                      <span className="block text-sm font-medium text-ink-800">Report & block</span>
                       <span className="block text-xs text-ink-500">
                         Calm tools on posts and profiles — no guilt, no red urgency.
                       </span>
