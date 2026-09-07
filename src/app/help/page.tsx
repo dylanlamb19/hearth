@@ -17,7 +17,10 @@ export default function HelpPage() {
         a short confirm — you won’t see them in your feed or chat — then saves that boundary on this device.
         No red urgency, no guilt.
       </p>
-      <p>Marketplace tip: meet in public places, trust your instincts, and never share payment details in chat. Hearth does not hold funds.</p>
+      <p id="marketplace">
+        <strong className="font-medium text-ink-800">Marketplace tip.</strong>{" "}
+        Meet in public if you can — trust your gut. Local pickups only; never send money in chat. Hearth doesn’t hold funds.
+      </p>
       <p>Need more help? Email support@hearth.demo — for this MVP, replies are simulated.</p>
     </StaticPage>
   );
