@@ -30,9 +30,9 @@ export default function MessagesPage() {
       {empty ? (
         <EmptyState
           icon={<MessageCircle className="h-10 w-10" />}
-          title="No messages yet"
-          description="Message someone from their profile. Community members write back."
-          actionLabel="Browse friends"
+          title="No conversations yet"
+          description="Browse people on Hearth and say hi."
+          actionLabel="Browse people"
           actionHref="/friends"
         />
       ) : (

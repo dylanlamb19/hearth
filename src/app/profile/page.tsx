@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
+import { EmptyState } from "@/components/EmptyState";
 import { ReportMenu } from "@/components/ReportMenu";
 import { PostCard } from "@/components/PostCard";
 import { useAuth } from "@/components/AuthProvider";
@@ -10,6 +13,7 @@ import { posts } from "@/data/seed";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const [empty, setEmpty] = useState(false);
   const mine = posts.slice(0, 2);
 
   return (
@@ -43,10 +47,23 @@ export default function ProfilePage() {
       </section>
 
       <div className="mt-6 space-y-4">
-        <h2 className="font-medium text-ink-900">Recent</h2>
-        {mine.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-medium text-ink-900">Moments</h2>
+          <Button variant="outline" onClick={() => setEmpty((v) => !v)}>
+            {empty ? "Show demo Moments" : "Preview empty state"}
+          </Button>
+        </div>
+        {empty ? (
+          <EmptyState
+            icon={<Sparkles className="h-10 w-10" />}
+            title="No Moments yet"
+            description="Share something quiet from your day — a photo, a thought, a porch update."
+            actionLabel="Share a first Moment"
+            actionHref="/home?compose=1"
+          />
+        ) : (
+          mine.map((post) => <PostCard key={post.id} post={post} />)
+        )}
       </div>
     </AppShell>
   );
