@@ -25,10 +25,8 @@ export default function NotificationsPage() {
       {empty ? (
         <EmptyState
           icon={<Bell className="h-10 w-10" />}
-          title="All quiet"
-          description="When someone loves a post, accepts a request, or invites you somewhere, it will show up here."
-          actionLabel="Go to your feed"
-          actionHref="/home"
+          title="You're all caught up"
+          tip="When people react or reply, it'll show up here."
         />
       ) : (
         <div className="space-y-2">

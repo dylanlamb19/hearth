@@ -30,8 +30,8 @@ export default function SavedPage() {
         <EmptyState
           icon={<Bookmark className="h-10 w-10" />}
           title="Nothing saved yet"
-          description="Tap Save on a post or listing to keep it here for later — recipes, trail notes, porch finds."
-          actionLabel="Browse the feed"
+          description="Tap Save on any Moment to keep it here."
+          actionLabel="Explore the feed"
           actionHref="/home"
         />
       ) : (

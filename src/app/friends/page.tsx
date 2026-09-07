@@ -28,10 +28,12 @@ export default function FriendsPage() {
       {empty ? (
         <EmptyState
           icon={<Users className="h-10 w-10" />}
-          title="Invite someone over"
-          description="Hearth works best with people you already know. Send a request from a profile or share your invite link."
-          actionLabel="Find people nearby"
+          title="Your circle starts here"
+          description="Find people on Hearth who share your vibe."
+          actionLabel="Find people"
           actionHref="/home"
+          secondaryLabel="Invite a friend"
+          secondaryDisabled
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
