@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Image as ImageIcon, Video, Smile } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -13,6 +14,21 @@ import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
 const FIRST_MOMENT_PLACEHOLDER = "What's happening by the hearth?";
+
+function HearthMark({ className }: { className?: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden className={className}>
+      <path
+        d="M6 22V14c0-5.5 4.5-10 10-10s10 4.5 10 10v8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path d="M4 22h24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 22c0-3 1.8-5 4-5s4 2 4 5" stroke="#e8731a" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -27,7 +43,6 @@ export default function HomePage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("compose") !== "1") return;
     setCompose(true);
-    // Focus after state/placeholder paint
     requestAnimationFrame(() => composerRef.current?.focus());
   }, []);
 
@@ -78,6 +93,18 @@ export default function HomePage() {
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
+
+          <div className="h-16" aria-hidden />
+
+          <div className="sticky bottom-4 z-20 pt-2">
+            <Link
+              href="/clips"
+              className="flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-cream-100 text-ink-800 shadow-[0_4px_24px_rgba(26,26,24,0.12)] ring-1 ring-ink-100/80 transition hover:bg-cream-50 hover:shadow-[0_6px_28px_rgba(26,26,24,0.14)] active:scale-[0.99]"
+            >
+              <HearthMark className="text-ink-900" />
+              <span className="text-[15px] font-medium tracking-tight">Watch Clips</span>
+            </Link>
+          </div>
         </div>
 
         <aside className="hidden space-y-4 xl:block">
