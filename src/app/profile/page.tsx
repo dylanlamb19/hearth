@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -33,13 +34,13 @@ export default function ProfilePage() {
             </div>
             <div className="flex items-center gap-2">
               {isOwnProfile && (
-                <Button
+                <Link
                   href="/home?compose=1"
-                  className="bg-cream-100 text-ink-800 shadow-soft ring-1 ring-ink-100/80 hover:bg-cream-50 hover:text-ink-900"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-cream-100 px-5 py-2.5 text-sm font-medium text-ink-800 shadow-soft ring-1 ring-ink-100/80 transition hover:bg-cream-50 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400"
                 >
                   <Plus className="h-4 w-4 opacity-70" strokeWidth={2.25} aria-hidden />
                   Share a Moment
-                </Button>
+                </Link>
               )}
               <Button variant="secondary">Edit profile</Button>
               <ReportMenu subject="your profile tools" />
