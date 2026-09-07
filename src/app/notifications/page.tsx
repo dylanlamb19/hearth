@@ -1,28 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import { Bell } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { notifications as seedNotes } from "@/data/seed";
 
 export default function NotificationsPage() {
-  const [empty, setEmpty] = useState(false);
-
   return (
     <AppShell>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl text-ink-900">Notifications</h1>
-          <p className="mt-1 text-sm text-ink-500">Soft pings from people and plans that matter.</p>
-        </div>
-        <Button variant="outline" onClick={() => setEmpty((v) => !v)}>
-          {empty ? "Show demo alerts" : "Preview empty state"}
-        </Button>
+      <div className="mb-6">
+        <h1 className="font-display text-3xl text-ink-900">Notifications</h1>
+        <p className="mt-1 text-sm text-ink-500">Soft pings from people and plans that matter.</p>
       </div>
 
-      {empty ? (
+      {seedNotes.length === 0 ? (
         <EmptyState
           icon={<Bell className="h-10 w-10" />}
           title="You're all caught up"

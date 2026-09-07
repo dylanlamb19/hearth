@@ -4,12 +4,10 @@ import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
-import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { conversations, personById } from "@/data/seed";
 
 export default function MessagesPage() {
-  const [empty, setEmpty] = useState(false);
   const [active, setActive] = useState(conversations[0]?.id);
 
   const current = conversations.find((c) => c.id === active);
@@ -17,23 +15,18 @@ export default function MessagesPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl text-ink-900">Messages</h1>
-          <p className="mt-1 text-sm text-ink-500">One conversation at a time. No rooms.</p>
-        </div>
-        <Button variant="outline" onClick={() => setEmpty((v) => !v)}>
-          {empty ? "Show demo chats" : "Preview empty state"}
-        </Button>
+      <div className="mb-6">
+        <h1 className="font-display text-3xl text-ink-900">Messages</h1>
+        <p className="mt-1 text-sm text-ink-500">One conversation at a time. No rooms.</p>
       </div>
 
-      {empty ? (
+      {conversations.length === 0 ? (
         <EmptyState
           icon={<MessageCircle className="h-10 w-10" />}
           title="No conversations yet"
           description="Browse people on Hearth and say hi."
           actionLabel="Browse people"
-          actionHref="/friends"
+          actionHref="/people"
         />
       ) : (
         <div className="grid min-h-[28rem] overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card lg:grid-cols-[280px_minmax(0,1fr)]">
