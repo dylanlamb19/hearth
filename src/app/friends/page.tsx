@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
+import { InviteSheet } from "@/components/InviteSheet";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
 
 export default function FriendsPage() {
   const { user } = useAuth();
+  const [inviteOpen, setInviteOpen] = useState(false);
   // Demo MVP: treat seed roster as friends except the signed-in account
   const friends = people.filter((p) => p.id !== user?.id && p.id !== "u-local");
 
@@ -29,7 +32,7 @@ export default function FriendsPage() {
           actionLabel="Find people"
           actionHref="/people"
           secondaryLabel="Invite a friend"
-          secondaryDisabled
+          onSecondaryClick={() => setInviteOpen(true)}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -54,6 +57,8 @@ export default function FriendsPage() {
           ))}
         </div>
       )}
+
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </AppShell>
   );
 }
