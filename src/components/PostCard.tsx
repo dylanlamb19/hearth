@@ -7,10 +7,24 @@ import { Post, personById, reactionsForPost } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
+import { useAuth } from "./AuthProvider";
 
 export function PostCard({ post }: { post: Post }) {
+  const { user } = useAuth();
   const [reactionsOpen, setReactionsOpen] = useState(false);
-  const author = personById(post.authorId);
+  const seedAuthor = personById(post.authorId);
+  const author =
+    seedAuthor ??
+    (user && post.authorId === user.id
+      ? {
+          id: user.id,
+          name: user.name,
+          handle: user.handle,
+          bio: user.bio || "",
+          mutuals: 0,
+          online: true,
+        }
+      : null);
   if (!author) return null;
 
   const reactions = reactionsForPost(post.id);

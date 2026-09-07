@@ -9,11 +9,11 @@ type AuthContextValue = {
   ready: boolean;
   login: (email: string, password: string, name?: string, handle?: string) => SessionUser;
   logout: () => void;
-  updateUser: (patch: Partial\u003cSessionUser\u003e) => void;
-  completeOnboarding: (patch?: Partial\u003cSessionUser\u003e) => void;
+  updateUser: (patch: Partial<SessionUser>) => void;
+  completeOnboarding: (patch?: Partial<SessionUser>) => void;
 };
 
-const AuthContext = createContext\u003cAuthContextValue | null\u003e(null);
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 function readCookie(name: string) {
   if (typeof document === "undefined") return null;
@@ -30,7 +30,7 @@ function clearCookie(name: string) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState\u003cSessionUser | null\u003e(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -41,7 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback((email: string, _password: string, name?: string, handle?: string) => {
     const normalized = email.trim().toLowerCase();
     const displayName = name?.trim() || normalized.split("@")[0] || "Friend";
-    // Prefer explicit handle or display name — avoid treating raw email as the handle source when a name is given.
     const nextHandle =
       (handle && normalizeHandle(handle)) ||
       handleFromName(name?.trim() ? name : displayName) ||
@@ -65,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const updateUser = useCallback((patch: Partial\u003cSessionUser\u003e) => {
+  const updateUser = useCallback((patch: Partial<SessionUser>) => {
     setUser((prev) => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };
@@ -74,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const completeOnboarding = useCallback((patch?: Partial\u003cSessionUser\u003e) => {
+  const completeOnboarding = useCallback((patch?: Partial<SessionUser>) => {
     setUser((prev) => {
       if (!prev) return prev;
       const next: SessionUser = {
@@ -96,7 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({ user, ready, login, logout, updateUser, completeOnboarding }),
     [user, ready, login, logout, updateUser, completeOnboarding],
   );
-  return \u003cAuthContext.Provider value={value}\u003e{children}\u003c/AuthContext.Provider\u003e;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
