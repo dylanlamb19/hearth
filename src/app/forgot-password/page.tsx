@@ -10,6 +10,7 @@ export default function ForgotPasswordPage() {
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Stubbed reset-token flow: always show the same confirmation (no account enumeration).
     setSent(true);
   }
 
@@ -19,17 +20,23 @@ export default function ForgotPasswordPage() {
         <Logo />
         <h1 className="mt-8 font-display text-3xl text-ink-900">Reset your password</h1>
         <p className="mt-2 text-sm text-ink-600">
-          Enter your email and we will send a reset link. For this demo, no email is actually sent.
+          Enter the email on your Hearth account and we&apos;ll send a reset link if it&apos;s here.
         </p>
         {sent ? (
           <div className="mt-6 rounded-2xl bg-cream-100 p-4 text-sm text-ink-700">
-            If an account exists for that address, a reset link would be on its way. You can also <Link href="/login" className="underline">sign in</Link> with the demo account.
+            If that email&apos;s on Hearth, we sent a reset link.
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Email</span>
-              <input name="email" type="email" required className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 focus:border-ember-400 focus:ring-ember-300" />
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="you@example.com"
+                className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-ink-900 shadow-sm focus:border-ember-400 focus:ring-ember-300"
+              />
             </label>
             <Button type="submit" className="w-full">Send reset link</Button>
           </form>

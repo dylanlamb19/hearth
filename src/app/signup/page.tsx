@@ -11,6 +11,7 @@ export default function SignupPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,8 +53,26 @@ export default function SignupPage() {
           <h1 className="font-display text-4xl text-ink-900">Join Hearth</h1>
           <p className="mt-2 text-ink-600">A quieter social network. No ads, no shouting.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Button href="/signup" variant="secondary" className="w-full" type="button">Continue with Google</Button>
-            <Button href="/signup" variant="secondary" className="w-full" type="button">Continue with X</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full cursor-not-allowed opacity-60"
+              disabled
+              aria-disabled="true"
+              title="Coming soon"
+            >
+              Google · Coming soon
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full cursor-not-allowed opacity-60"
+              disabled
+              aria-disabled="true"
+              title="Coming soon"
+            >
+              X · Coming soon
+            </Button>
           </div>
           <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wider text-ink-400">
             <span className="h-px flex-1 bg-ink-200" /> or email <span className="h-px flex-1 bg-ink-200" />
@@ -69,8 +88,27 @@ export default function SignupPage() {
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Password</span>
-              <input name="password" type="password" required minLength={8} placeholder="At least 8 characters" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
-              <span className="mt-1.5 block text-xs text-ink-400">Use 8+ characters. A mix of letters and numbers is safer.</span>
+              <div className="relative">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  placeholder="At least 8 characters"
+                  className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 pr-16 shadow-sm focus:border-ember-400 focus:ring-ember-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-medium text-ink-500 hover:text-ink-800"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              <span className="mt-1.5 block text-xs text-ink-400">
+                At least 8 characters. Longer is stronger — mix letters, numbers, and a symbol if you can.
+              </span>
             </label>
             <label className="flex items-start gap-3 text-sm text-ink-600">
               <input name="terms" type="checkbox" className="mt-1 rounded border-ink-300 text-hearth focus:ring-ember-300" />
@@ -81,6 +119,14 @@ export default function SignupPage() {
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" className="w-full">Create account</Button>
           </form>
+          <p className="mt-4 text-center text-xs text-ink-500">
+            Free · No spam · You can delete anytime
+          </p>
+          <p className="mt-1.5 text-center text-xs text-ink-400">
+            <Link href="/terms" className="underline underline-offset-2 hover:text-ink-700">Terms</Link>
+            {" · "}
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-700">Privacy</Link>
+          </p>
           <p className="mt-6 text-sm text-ink-500">
             Already here? <Link href="/login" className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>
           </p>
