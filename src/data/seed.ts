@@ -120,7 +120,7 @@ export const posts: Post[] = [
     id: "p2",
     authorId: "u-jordan",
     body: "Sunday stew is on. Come by after six if you are free — bring bread if you have it.",
-    image: "https://images.unsplash.com/photo-1478144592103-53e28a4a4aa3?w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=1200&q=80",
     createdAt: "5 hours ago",
     loves: 41,
     comments: 14,
@@ -181,7 +181,7 @@ export const postReactions: Record<string, PostReaction[]> = {
 
 export const moments: Moment[] = [
   { id: "m1", authorId: "u-maya", image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80", caption: "Early light", expiresIn: "18h left" },
-  { id: "m2", authorId: "u-sam", image: "https://images.unsplash.com/photo-1469474968028-57325c77cf17?w=600&q=80", caption: "Out past the creek", expiresIn: "11h left" },
+  { id: "m2", authorId: "u-sam", image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=600&q=80", caption: "Out past the creek", expiresIn: "11h left" },
   { id: "m3", authorId: "u-leo", image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80", caption: "Second cup", expiresIn: "6h left" },
   { id: "m4", authorId: "u-aria", image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&q=80", caption: "Night walk", expiresIn: "3h left" },
 ];
@@ -217,7 +217,7 @@ export const listings: Listing[] = [
     sellerId: "u-sam",
     distance: "2.4 mi",
     postedAt: "4 days ago",
-    image: "https://images.unsplash.com/photo-1485965120184-aafb341778c0?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=800&q=80",
     description: "Rides smooth. Needs a new basket if you want one.",
   },
   {
@@ -235,7 +235,7 @@ export const listings: Listing[] = [
 
 export const groups: Group[] = [
   { id: "g1", name: "Weeknight cooks", members: 48, about: "Share what is on the stove. No pressure, no perfection.", cover: "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800&q=80" },
-  { id: "g2", name: "Trail notes", members: 63, about: "Quiet paths, weather checks, and who is free Saturday.", cover: "https://images.unsplash.com/photo-1454497409790-ae196fc9b4e4?w=800&q=80" },
+  { id: "g2", name: "Trail notes", members: 63, about: "Quiet paths, weather checks, and who is free Saturday.", cover: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" },
   { id: "g3", name: "Listening room", members: 31, about: "Albums worth sitting still for.", cover: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80" },
 ];
 
@@ -264,13 +264,13 @@ export const videos: VideoItem[] = [
   { id: "v3", title: "Rearranging the living room", authorId: "u-nova", duration: "6:05", views: "2.1k", thumb: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80" },
 ];
 
-/** Vertical shorts stubs — public sample mp4s that play reliably. */
+/** Vertical shorts stubs — public sample mp4s that play reliably (gtv-videos-bucket is 403). */
 export const clips: Clip[] = [
   {
     id: "clip1",
     authorId: "u-maya",
     caption: "Mist on the ridge this morning. Left the phone in the car for once.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
     likes: 128,
     comments: 14,
     thumb: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=80",
@@ -279,25 +279,25 @@ export const clips: Clip[] = [
     id: "clip2",
     authorId: "u-jordan",
     caption: "Sunday stew simmer — come by after six if you are free.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
     likes: 86,
     comments: 9,
-    thumb: "https://images.unsplash.com/photo-1478144592103-53e28a4a4aa3?w=600&q=80",
+    thumb: "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=600&q=80",
   },
   {
     id: "clip3",
     authorId: "u-sam",
     caption: "Porch light, vinyl crackle, and a bike that needs a new basket.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
     likes: 204,
     comments: 22,
-    thumb: "https://images.unsplash.com/photo-1485965120184-aafb341778c0?w=600&q=80",
+    thumb: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=600&q=80",
   },
   {
     id: "clip4",
     authorId: "u-nova",
     caption: "Small rooms can hold a lot — candles, soft jazz, finished table.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    videoUrl: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
     likes: 312,
     comments: 31,
     thumb: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80",
@@ -306,7 +306,7 @@ export const clips: Clip[] = [
     id: "clip5",
     authorId: "u-leo",
     caption: "Weekend market finds and a sketchbook that finally filled a page.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    videoUrl: "https://download.samplelib.com/mp4/sample-5s.mp4",
     likes: 67,
     comments: 5,
     thumb: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
@@ -315,7 +315,7 @@ export const clips: Clip[] = [
     id: "clip6",
     authorId: "u-aria",
     caption: "Listening room hour — sit still, let the album finish.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+    videoUrl: "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
     likes: 151,
     comments: 18,
     thumb: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&q=80",
