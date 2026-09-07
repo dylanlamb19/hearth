@@ -104,7 +104,7 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
 
           <div className="px-5 py-5 sm:px-6">
             <p id="invite-sheet-body" className="text-sm leading-relaxed text-ink-600">
-              Share with someone you\'d invite into the room — no bulk sends.
+              Share with someone you'd invite into the room — no bulk sends.
             </p>
 
             <div className="mt-4 rounded-2xl bg-cream-100 px-3.5 py-3 ring-1 ring-ink-100/80">
