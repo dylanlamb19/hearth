@@ -1,12 +1,21 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import { Heart, MessageCircle, Share2, Bookmark, Globe2, Users } from "lucide-react";
-import { Post, personById } from "@/data/seed";
+import { Post, personById, reactionsForPost } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
+import { ReactionsSheet } from "./ReactionsSheet";
 
 export function PostCard({ post }: { post: Post }) {
+  const [reactionsOpen, setReactionsOpen] = useState(false);
   const author = personById(post.authorId);
   if (!author) return null;
+
+  const reactions = reactionsForPost(post.id);
+  const loveCount = reactions.length;
+
   return (
     <article className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-start justify-between gap-3">
@@ -30,8 +39,13 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       )}
       <div className="mt-4 flex flex-wrap items-center gap-1 text-sm text-ink-500">
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <Heart className="h-4 w-4" /> Love · {post.loves}
+        <button
+          type="button"
+          aria-label={`View ${loveCount} reactions`}
+          onClick={() => setReactionsOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
+        >
+          <Heart className="h-4 w-4" /> Love · {loveCount}
         </button>
         <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
           <MessageCircle className="h-4 w-4" /> Comment · {post.comments}
@@ -43,6 +57,13 @@ export function PostCard({ post }: { post: Post }) {
           <Bookmark className="h-4 w-4" /> Save
         </button>
       </div>
+
+      <ReactionsSheet
+        open={reactionsOpen}
+        onClose={() => setReactionsOpen(false)}
+        reactions={reactions}
+        peopleById={personById}
+      />
     </article>
   );
 }

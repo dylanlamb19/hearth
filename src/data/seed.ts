@@ -19,6 +19,11 @@ export type Post = {
   privacy: "friends" | "public";
 };
 
+export type PostReaction = {
+  emoji: string;
+  personId: string;
+};
+
 export type Moment = {
   id: string;
   authorId: string;
@@ -127,7 +132,7 @@ export const posts: Post[] = [
     body: "Found a quiet corner at the bookshop. The radiator hummed and the afternoon felt longer.",
     image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
     createdAt: "Yesterday",
-    loves: 18,
+    loves: 0,
     comments: 3,
     privacy: "public",
   },
@@ -142,6 +147,37 @@ export const posts: Post[] = [
     privacy: "friends",
   },
 ];
+
+/** Seed reactors per post (person ids). Sheet shows up to ~20. */
+export const postReactions: Record<string, PostReaction[]> = {
+  p1: [
+    { emoji: "❤️", personId: "u-jordan" },
+    { emoji: "❤️", personId: "u-sam" },
+    { emoji: "❤️", personId: "u-nova" },
+    { emoji: "❤️", personId: "u-leo" },
+    { emoji: "❤️", personId: "u-aria" },
+    { emoji: "❤️", personId: "u-ember" },
+  ],
+  p2: [
+    { emoji: "❤️", personId: "u-maya" },
+    { emoji: "❤️", personId: "u-sam" },
+    { emoji: "❤️", personId: "u-nova" },
+    { emoji: "❤️", personId: "u-leo" },
+    { emoji: "❤️", personId: "u-aria" },
+    { emoji: "❤️", personId: "u-ember" },
+    { emoji: "🔥", personId: "u-maya" },
+    { emoji: "🔥", personId: "u-leo" },
+  ],
+  p3: [],
+  p4: [
+    { emoji: "❤️", personId: "u-maya" },
+    { emoji: "❤️", personId: "u-jordan" },
+    { emoji: "❤️", personId: "u-sam" },
+    { emoji: "❤️", personId: "u-leo" },
+    { emoji: "❤️", personId: "u-aria" },
+    { emoji: "❤️", personId: "u-ember" },
+  ],
+};
 
 export const moments: Moment[] = [
   { id: "m1", authorId: "u-maya", image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80", caption: "Early light", expiresIn: "18h left" },
@@ -290,4 +326,8 @@ export const savedIds = ["p2", "p4", "l2"];
 
 export function personById(id: string) {
   return people.find((p) => p.id === id);
+}
+
+export function reactionsForPost(postId: string): PostReaction[] {
+  return postReactions[postId] ?? [];
 }
