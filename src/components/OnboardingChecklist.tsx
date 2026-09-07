@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { markFindPeoplePending } from "@/lib/notificationPermission";
 
 const STORAGE_KEY = "hearth_checklist";
 
 const items = [
   { href: "/profile", label: "Finish profile" },
-  { href: "/people", label: "Find people" },
+  { href: "/people", label: "Find people", notifyPending: true },
   { href: "/home?compose=1", label: "Share a first Moment" },
 ] as const;
 
@@ -55,6 +56,11 @@ export function OnboardingChecklist() {
           <li key={item.href}>
             <Link
               href={item.href}
+              onClick={() => {
+                if ("notifyPending" in item && item.notifyPending) {
+                  markFindPeoplePending();
+                }
+              }}
               className="flex items-center justify-between rounded-2xl bg-cream-50 px-3 py-2.5 text-sm text-ink-800 ring-1 ring-ink-100 transition hover:bg-cream-100 hover:ring-ember-200"
             >
               <span>{item.label}</span>
