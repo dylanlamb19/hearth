@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { Image as ImageIcon, Video, Smile } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -16,18 +15,20 @@ const FIRST_MOMENT_PLACEHOLDER = "What's happening by the hearth?";
 
 export default function HomePage() {
   const { user } = useAuth();
-  const searchParams = useSearchParams();
-  const compose = searchParams.get("compose") === "1";
   const composerRef = useRef<HTMLInputElement>(null);
+  const [compose, setCompose] = useState(false);
   const [tab, setTab] = useState("For you");
   const birthdays = people.filter((p) => p.birthday);
   const suggestions = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id).slice(0, 3);
   const contacts = people.filter((p) => p.id !== "u-ember" && p.id !== user?.id);
 
   useEffect(() => {
-    if (!compose) return;
-    composerRef.current?.focus();
-  }, [compose]);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("compose") !== "1") return;
+    setCompose(true);
+    // Focus after state/placeholder paint
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }, []);
 
   return (
     <AppShell>
