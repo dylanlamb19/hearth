@@ -31,3 +31,16 @@ export function addBlockedId(subjectId: string): string[] {
   }
   return next;
 }
+
+/** Remove a blocked subject id. Returns the updated list. */
+export function removeBlockedId(subjectId: string): string[] {
+  const id = subjectId.trim();
+  if (!id) return getBlockedIds();
+  const next = getBlockedIds().filter((x) => x !== id);
+  try {
+    localStorage.setItem(BLOCKED_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore quota / private mode */
+  }
+  return next;
+}
