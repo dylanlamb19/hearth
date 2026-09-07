@@ -10,6 +10,7 @@ export function EmptyState({
   secondaryLabel,
   secondaryHref,
   secondaryDisabled,
+  onSecondaryClick,
   icon,
 }: {
   title: string;
@@ -20,8 +21,12 @@ export function EmptyState({
   secondaryLabel?: string;
   secondaryHref?: string;
   secondaryDisabled?: boolean;
+  onSecondaryClick?: () => void;
   icon?: ReactNode;
 }) {
+  const secondaryEnabled =
+    Boolean(secondaryLabel) && !secondaryDisabled && (Boolean(secondaryHref) || Boolean(onSecondaryClick));
+
   return (
     <div className="mx-auto flex w-full max-w-[360px] flex-col items-center justify-center rounded-3xl border-2 border-dashed border-ink-200 bg-white/50 px-6 py-16 text-center">
       {icon && <div className="mb-4 text-ink-400">{icon}</div>}
@@ -38,12 +43,18 @@ export function EmptyState({
             </Button>
           )}
           {secondaryLabel &&
-            (secondaryDisabled || !secondaryHref ? (
-              <Button type="button" variant="secondary" className="w-full" disabled>
-                {secondaryLabel}
-              </Button>
+            (secondaryEnabled ? (
+              onSecondaryClick ? (
+                <Button type="button" onClick={onSecondaryClick} className="w-full" variant="secondary">
+                  {secondaryLabel}
+                </Button>
+              ) : (
+                <Button href={secondaryHref} className="w-full" variant="secondary">
+                  {secondaryLabel}
+                </Button>
+              )
             ) : (
-              <Button href={secondaryHref} className="w-full" variant="secondary">
+              <Button type="button" variant="secondary" className="w-full" disabled>
                 {secondaryLabel}
               </Button>
             ))}
