@@ -6,14 +6,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   Heart,
-  MessageCircle,
   Share2,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/components/AuthProvider";
+import { ReactionsSheet } from "@/components/ReactionsSheet";
 import { clips, personById } from "@/data/seed";
+import { useLoved } from "@/lib/loves";
 import { getBlockedIds } from "@/lib/blocked";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,9 @@ export default function ClipsPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const touchStartY = useRef<number | null>(null);
   const wheelLock = useRef(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [reactionsOpen, setReactionsOpen] = useState(false);
 
   // Re-read block list each render (client-only localStorage).
   const blockedIds = new Set(getBlockedIds());
@@ -62,8 +66,41 @@ export default function ClipsPage() {
   }, []);
 
   const total = visibleClips.length;
+
+  // Shared links (?clip=<id> or #<id>) open on that clip.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wanted = params.get("clip") || window.location.hash.replace(/^#/, "");
+    if (!wanted) return;
+    const i = visibleClips.findIndex((c) => c.id === wanted);
+    if (i >= 0) setIndex(i);
+  }, [visibleClips]);
   const clip = visibleClips[index];
   const author = clip ? personById(clip.authorId) : undefined;
+  const [loved, toggleLoved] = useLoved(clip ? `clip:${clip.id}` : "clip:none");
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  function showToast(message: string) {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2200);
+  }
+
+  async function shareClip() {
+    if (!clip) return;
+    const url = `${window.location.origin}/clips?clip=${encodeURIComponent(clip.id)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Link copied");
+    } catch {
+      showToast("Couldn’t copy — try again.");
+    }
+  }
 
   useEffect(() => {
     if (total === 0) {
@@ -239,13 +276,27 @@ export default function ClipsPage() {
 
       {/* Right rail — cream fill + ink icons, soft dark wash (no neon) */}
       <div className="absolute bottom-28 right-3 z-30 flex flex-col items-center gap-5 sm:right-[max(0.75rem,calc(50%-240px+0.75rem))]">
-        <RailButton label={formatCount(clip.likes)} ariaLabel="Like">
-          <Heart className="h-6 w-6" />
-        </RailButton>
-        <RailButton label={formatCount(clip.comments)} ariaLabel="Comment">
-          <MessageCircle className="h-6 w-6" />
-        </RailButton>
-        <RailButton label="Share" ariaLabel="Share">
+        {/* Love: heart toggles your react, count opens the Reactions sheet. Comments wait for #26. */}
+        <div className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1">
+          <button
+            type="button"
+            aria-label={loved ? "Remove your Love" : "Love"}
+            aria-pressed={loved}
+            onClick={toggleLoved}
+            className={cn(creamChrome, "transition hover:bg-cream-100", loved && "text-amber-600")}
+          >
+            <Heart className="h-6 w-6" fill={loved ? "currentColor" : "none"} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setReactionsOpen(true)}
+            aria-label="View reactions"
+            className="text-[11px] font-medium text-cream-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]"
+          >
+            {formatCount(clip.likes + (loved ? 1 : 0))}
+          </button>
+        </div>
+        <RailButton label="Share" ariaLabel="Share" onClick={shareClip}>
           <Share2 className="h-6 w-6" />
         </RailButton>
       </div>
@@ -274,6 +325,28 @@ export default function ClipsPage() {
           {clip.caption}
         </p>
       </div>
+
+      <ReactionsSheet
+        open={reactionsOpen}
+        onClose={() => setReactionsOpen(false)}
+        reactions={loved && user ? [{ emoji: "❤️", personId: user.id }] : []}
+        peopleById={(id) =>
+          personById(id) ??
+          (id === user.id
+            ? { id: user.id, name: user.name, handle: user.handle, bio: "", online: true }
+            : undefined)
+        }
+      />
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full border border-ink-100 bg-cream-50 px-4 py-2 text-sm text-ink-800 shadow-soft"
+        >
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
@@ -282,15 +355,18 @@ function RailButton({
   children,
   label,
   ariaLabel,
+  onClick,
 }: {
   children: React.ReactNode;
   label: string;
   ariaLabel: string;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       aria-label={ariaLabel}
+      onClick={onClick}
       className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1"
     >
       <span className={cn(creamChrome, "transition hover:bg-cream-100")}>

@@ -9,19 +9,27 @@ import { EmptyState } from "@/components/EmptyState";
 import { InviteSheet } from "@/components/InviteSheet";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
-import { people } from "@/data/seed";
+import { personById } from "@/data/seed";
+import { friendIdsFor } from "@/lib/social";
 
 export default function FriendsPage() {
   const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
-  // Demo MVP: treat seed roster as friends except the signed-in account
-  const friends = people.filter((p) => p.id !== user?.id && p.id !== "u-local");
+  // Demo friends come from the shared social model (same list Home's Friends tab uses).
+  const friends = friendIdsFor(user)
+    .map((id) => personById(id))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl text-ink-900">Friends</h1>
-        <p className="mt-1 text-sm text-ink-500">Requests, suggestions, and the people who belong in this room.</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl text-ink-900">Friends</h1>
+          <p className="mt-1 text-sm text-ink-500">The people who belong in this room.</p>
+        </div>
+        <Button variant="secondary" onClick={() => setInviteOpen(true)}>
+          Invite someone in
+        </Button>
       </div>
 
       {friends.length === 0 ? (
