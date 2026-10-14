@@ -31,6 +31,7 @@ export default function ForgotPasswordPage() {
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Email</span>
               <input
+                id="forgot-password-email"
                 name="email"
                 type="email"
                 required

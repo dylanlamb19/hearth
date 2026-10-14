@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
@@ -9,8 +9,13 @@ import { useAuth } from "@/components/AuthProvider";
 import { needsOnboarding } from "@/lib/auth";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user, ready } = useAuth();
   const router = useRouter();
+
+  // Already signed in? Head home instead of showing the form again.
+  useEffect(() => {
+    if (ready && user) router.replace(needsOnboarding(user) ? "/welcome" : "/home");
+  }, [ready, user, router]);
   const [error, setError] = useState("");
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -53,16 +58,16 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Email</span>
-              <input name="email" type="email" required placeholder="you@example.com" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 text-ink-900 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
+              <input id="login-email" name="email" type="email" required placeholder="you@example.com" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 text-ink-900 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Password</span>
-              <input name="password" type="password" required minLength={8} placeholder="At least 8 characters" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 text-ink-900 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
+              <input id="login-password" name="password" type="password" required minLength={8} placeholder="At least 8 characters" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 text-ink-900 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
             </label>
             <div className="flex justify-end">
               <Link href="/forgot-password" className="text-sm text-ink-500 hover:text-ink-800">Forgot password?</Link>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-ember-700">{error}</p>}
             <Button type="submit" className="w-full">Sign in</Button>
           </form>
           <p className="mt-6 text-sm text-ink-500">

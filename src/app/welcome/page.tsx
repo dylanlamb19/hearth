@@ -42,6 +42,7 @@ export default function WelcomePage() {
   const [handleReady, setHandleReady] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
+  const [interestNote, setInterestNote] = useState("");
 
   const suggestions = useMemo(
     () => people.filter((p) => p.id !== user?.id).slice(0, 8),
@@ -91,11 +92,17 @@ export default function WelcomePage() {
   }
 
   function toggleInterest(chip: string) {
-    setInterests((prev) => {
-      if (prev.includes(chip)) return prev.filter((c) => c !== chip);
-      if (prev.length >= 8) return prev;
-      return [...prev, chip];
-    });
+    if (interests.includes(chip)) {
+      setInterests(interests.filter((c) => c !== chip));
+      setInterestNote("");
+      return;
+    }
+    if (interests.length >= 8) {
+      setInterestNote("Eight is plenty for now — tap one to swap it out.");
+      return;
+    }
+    setInterests([...interests, chip]);
+    setInterestNote("");
   }
 
   function togglePerson(id: string) {
@@ -148,6 +155,8 @@ export default function WelcomePage() {
               <div className="relative">
                 <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-ink-400">@</span>
                 <input
+                  id="welcome-handle"
+                  name="handle"
                   value={handle}
                   onChange={(e) => setHandle(normalizeHandle(e.target.value))}
                   placeholder={handleFromName(user.name)}
@@ -156,7 +165,7 @@ export default function WelcomePage() {
                   className={cn(
                     "w-full rounded-2xl border bg-cream-50 py-3 pl-9 pr-4 text-sm focus:ring-ember-300",
                     handleInvalid
-                      ? "border-red-300 focus:border-red-400"
+                      ? "border-ember-300 focus:border-ember-400"
                       : "border-ink-200 focus:border-ember-400",
                   )}
                   aria-invalid={handleInvalid}
@@ -174,6 +183,8 @@ export default function WelcomePage() {
             <label className="block text-left text-sm">
               <span className="mb-1.5 block text-ink-600">Photo URL (optional)</span>
               <input
+                id="welcome-photo"
+                name="photoUrl"
                 value={photoUrl}
                 onChange={(e) => setPhotoUrl(e.target.value)}
                 placeholder="https://…"
@@ -183,6 +194,8 @@ export default function WelcomePage() {
             <label className="block text-left text-sm">
               <span className="mb-1.5 block text-ink-600">One-line bio</span>
               <input
+                id="welcome-bio"
+                name="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="What friends should know"
@@ -191,7 +204,7 @@ export default function WelcomePage() {
               />
             </label>
             <p className="text-left text-xs text-ink-400">
-              You control who sees your posts; default is Friends once you have a circle.{" "}
+              You control who sees your Moments; default is Friends once you have a circle.{" "}
               <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>
             </p>
             <div className="flex flex-col gap-2 pt-2">
@@ -226,6 +239,7 @@ export default function WelcomePage() {
                   <button
                     key={chip}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => toggleInterest(chip)}
                     className={cn(
                       "rounded-full px-3 py-1.5 text-sm capitalize transition",
@@ -239,12 +253,14 @@ export default function WelcomePage() {
                 );
               })}
             </div>
-            <p className="text-xs text-ink-400">{interests.length} selected</p>
+            <p className="text-xs text-ink-400" aria-live="polite">
+              {interestNote || `${interests.length} selected`}
+            </p>
             <div className="flex flex-col gap-2 pt-2">
               <Button
                 type="button"
                 className="w-full"
-                disabled={interests.length > 0 && interests.length < 3}
+                disabled={interests.length < 3 || interests.length > 8}
                 onClick={() => {
                   updateUser({ interests });
                   setStep(2);
@@ -270,6 +286,7 @@ export default function WelcomePage() {
                   <button
                     key={p.id}
                     type="button"
+                    aria-pressed={selected}
                     onClick={() => togglePerson(p.id)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition",

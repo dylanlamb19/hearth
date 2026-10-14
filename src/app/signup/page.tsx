@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
+import { needsOnboarding } from "@/lib/auth";
 
 export default function SignupPage() {
-  const { login } = useAuth();
+  const { login, user, ready } = useAuth();
   const router = useRouter();
+
+  // Already signed in? Head home instead of showing the form again.
+  useEffect(() => {
+    if (ready && user) router.replace(needsOnboarding(user) ? "/welcome" : "/home");
+  }, [ready, user, router]);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -80,16 +86,17 @@ export default function SignupPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Your name</span>
-              <input name="name" required placeholder="What friends call you" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
+              <input id="signup-name" name="name" required placeholder="What friends call you" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Email</span>
-              <input name="email" type="email" required placeholder="you@example.com" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
+              <input id="signup-email" name="email" type="email" required placeholder="you@example.com" className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300" />
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-600">Password</span>
               <div className="relative">
                 <input
+                  id="signup-password"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   required
@@ -111,12 +118,12 @@ export default function SignupPage() {
               </span>
             </label>
             <label className="flex items-start gap-3 text-sm text-ink-600">
-              <input name="terms" type="checkbox" className="mt-1 rounded border-ink-300 text-hearth focus:ring-ember-300" />
+              <input id="signup-terms" name="terms" type="checkbox" className="mt-1 rounded border-ink-300 text-hearth focus:ring-ember-300" />
               <span>
                 I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link> and have read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice.
               </span>
             </label>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-ember-700">{error}</p>}
             <Button type="submit" className="w-full">Create account</Button>
           </form>
           <p className="mt-4 text-center text-xs text-ink-500">
