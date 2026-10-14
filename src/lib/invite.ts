@@ -1,3 +1,4 @@
+import { resolveHandle } from "@/data/seed";
 const GLOBAL_STORAGE_KEY = "hearth_invite_code";
 
 function storageKeyForUser(userId: string): string {
@@ -76,3 +77,36 @@ export function buildInviteUrl(code: string): string {
   if (typeof window === "undefined") return `/invite/${code}`;
   return `${window.location.origin}/invite/${code}`;
 }
+
+export type InviteLookup = { valid: boolean; inviterName: string | null };
+
+/**
+ * Check an invite code by shape: any well-formed `<handle>-<suffix>` is accepted.
+ * Codes are minted on the inviter's device, so the person opening the link can't
+ * look them up locally — we resolve aliases and name the inviter when the handle is known.
+ * TODO(#22): replace with a real `invites` table lookup in Supabase.
+ */
+export function lookupInviteCode(
+  rawCode: string,
+  members: { id: string; name: string; handle: string }[],
+): InviteLookup {
+  const code = (rawCode || "").trim().toLowerCase();
+  // Loose on purpose: older Math.random suffixes and long handles still pass.
+  const match = /^([a-z0-9_.]{1,30})-([a-z0-9]{1,16})$/.exec(code);
+  if (!match) return { valid: false, inviterName: null };
+  const handle = resolveHandle(match[1]);
+  const member =
+    members.find((m) => m.handle.toLowerCase() === handle) ??
+    members.find((m) => inviteBaseFromSeed(m.handle) === inviteBaseFromSeed(handle));
+  // Unknown handle but well-formed code: still welcome them ("Someone saved you a seat").
+  return { valid: true, inviterName: member?.name ?? null };
+}
+
+/** Read a pending invite code from the current URL (?invite=...). */
+export function inviteFromSearch(search: string): string | null {
+  const value = new URLSearchParams(search).get("invite");
+  return isValidCode(value) ? value : null;
+}
+
+/** Invite code carried from /invite/[code] through signup (kept on this device). */
+export const PENDING_INVITE_KEY = "hearth_pending_invite";
