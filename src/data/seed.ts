@@ -3,7 +3,8 @@ export type Person = {
   name: string;
   handle: string;
   bio: string;
-  mutuals: number;
+  /** Matches the 10 welcome interests so People chips always find someone. */
+  interests?: string[];
   online?: boolean;
   birthday?: string;
 };
@@ -17,6 +18,8 @@ export type Post = {
   loves: number;
   comments: number;
   privacy: "friends" | "public";
+  /** Demo content shipped with the app (shown with a muted "Sample" tag). */
+  sample?: boolean;
 };
 
 export type PostReaction = {
@@ -40,7 +43,10 @@ export type Listing = {
   sellerId: string;
   distance: string;
   postedAt: string;
-  image: string;
+  /** Photo URL. Omit when `illustration` is set. */
+  image?: string;
+  /** Cream line-drawing placeholder instead of a stock photo. */
+  illustration?: "skillet" | "stool" | "monstera";
   description: string;
 };
 
@@ -74,6 +80,8 @@ export type Notification = {
   text: string;
   time: string;
   unread: boolean;
+  /** Where tapping the row goes (post anchor, profile, or event). */
+  href: string;
 };
 
 export type VideoItem = {
@@ -96,14 +104,14 @@ export type Clip = {
 };
 
 export const people: Person[] = [
-  { id: "u-ember", name: "Ember", handle: "ember", bio: "Keeping the lights low and the kettle on.", mutuals: 0, online: true },
-  { id: "u-kindling", name: "Kindling", handle: "kindling", bio: "Soft invites. One seat at a time.", mutuals: 0, online: true },
-  { id: "u-maya", name: "Maya Chen", handle: "maya", bio: "Trail notes and quiet mornings.", mutuals: 12, online: true, birthday: "Today" },
-  { id: "u-jordan", name: "Jordan Hale", handle: "jordan", bio: "Cooks for friends. Rarely posts.", mutuals: 8, online: false },
-  { id: "u-sam", name: "Sam Rivera", handle: "sam", bio: "Vinyl, bikes, and porch light.", mutuals: 5, online: true },
-  { id: "u-nova", name: "Nova Park", handle: "nova", bio: "Design that feels like home.", mutuals: 3, online: false },
-  { id: "u-leo", name: "Leo Brooks", handle: "leo", bio: "Weekend markets and sketchbooks.", mutuals: 7, online: true },
-  { id: "u-aria", name: "Aria Quinn", handle: "aria", bio: "Listening rooms and long walks.", mutuals: 4, online: false },
+  { id: "u-ember", name: "Ember", handle: "ember", bio: "Keeping the lights low and the kettle on.", online: true, interests: ["cooking", "reading", "neighbors"] },
+  { id: "u-kindling", name: "Kindling", handle: "kindling", bio: "Soft invites. One seat at a time.", online: true, interests: ["neighbors", "design", "markets"] },
+  { id: "u-maya", name: "Maya Chen", handle: "maya", bio: "Trail notes and quiet mornings.", online: true, birthday: "Today", interests: ["trails", "plants", "baking"] },
+  { id: "u-jordan", name: "Jordan Hale", handle: "jordan", bio: "Cooks for friends. Rarely posts.", online: false, interests: ["cooking", "baking", "neighbors"] },
+  { id: "u-sam", name: "Sam Rivera", handle: "sam", bio: "Vinyl, bikes, and porch light.", online: true, interests: ["music", "bikes", "markets"] },
+  { id: "u-nova", name: "Nova Park", handle: "nova", bio: "Design that feels like home.", online: false, interests: ["design", "plants", "reading"] },
+  { id: "u-leo", name: "Leo Brooks", handle: "leo", bio: "Weekend markets and sketchbooks.", online: true, interests: ["markets", "design", "bikes"] },
+  { id: "u-aria", name: "Aria Quinn", handle: "aria", bio: "Listening rooms and long walks.", online: false, interests: ["music", "reading", "trails"] },
 ];
 
 /** Legacy email-local-part handles that resolve to a seeded person. */
@@ -117,13 +125,19 @@ export function resolveHandle(raw: string): string {
   return handleAliases[key] || key.replace(/[^a-z0-9_]/g, "") || key;
 }
 
+/** ISO timestamp `hours` before now, so seed times render through shortTimeAgo. */
+function hoursAgo(hours: number): string {
+  return new Date(Date.now() - hours * 3600 * 1000).toISOString();
+}
+
 export const posts: Post[] = [
   {
     id: "p1",
     authorId: "u-maya",
     body: "Mist hung over the ridge this morning. Brought coffee and left the phone in the car.",
     image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&q=80",
-    createdAt: "3 hours ago",
+    createdAt: hoursAgo(3),
+    sample: true,
     loves: 24,
     comments: 6,
     privacy: "friends",
@@ -133,7 +147,8 @@ export const posts: Post[] = [
     authorId: "u-jordan",
     body: "Sunday stew is on. Come by after six if you are free — bring bread if you have it.",
     image: "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=1200&q=80",
-    createdAt: "5 hours ago",
+    createdAt: hoursAgo(5),
+    sample: true,
     loves: 41,
     comments: 14,
     privacy: "friends",
@@ -143,7 +158,8 @@ export const posts: Post[] = [
     authorId: "u-sam",
     body: "Found a quiet corner at the bookshop. The radiator hummed and the afternoon felt longer.",
     image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-    createdAt: "Yesterday",
+    createdAt: hoursAgo(26),
+    sample: true,
     loves: 0,
     comments: 3,
     privacy: "public",
@@ -153,7 +169,8 @@ export const posts: Post[] = [
     authorId: "u-nova",
     body: "Candles, soft jazz, and a table that finally feels finished. Small rooms can hold a lot.",
     image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1200&q=80",
-    createdAt: "Yesterday",
+    createdAt: hoursAgo(30),
+    sample: true,
     loves: 57,
     comments: 9,
     privacy: "friends",
@@ -207,7 +224,7 @@ export const listings: Listing[] = [
     sellerId: "u-jordan",
     distance: "1.2 mi",
     postedAt: "2 days ago",
-    image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80",
+    illustration: "skillet",
     description: "Seasoned and ready. Pickup on the porch preferred.",
   },
   {
@@ -218,7 +235,7 @@ export const listings: Listing[] = [
     sellerId: "u-nova",
     distance: "0.8 mi",
     postedAt: "Yesterday",
-    image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=800&q=80",
+    illustration: "stool",
     description: "Solid cedar. Fits a medium planter perfectly.",
   },
   {
@@ -240,7 +257,7 @@ export const listings: Listing[] = [
     sellerId: "u-maya",
     distance: "0.5 mi",
     postedAt: "Today",
-    image: "https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800&q=80",
+    illustration: "monstera",
     description: "Rooted in water. Happy in bright shade.",
   },
 ];
@@ -264,10 +281,10 @@ export const conversations: Conversation[] = [
 ];
 
 export const notifications: Notification[] = [
-  { id: "n1", text: "Maya Chen loved your post", time: "1h ago", unread: true },
-  { id: "n2", text: "Jordan Hale invited you to Porch soup night", time: "3h ago", unread: true },
-  { id: "n3", text: "Sam Rivera accepted your friend request", time: "Yesterday", unread: false },
-  { id: "n4", text: "Nova Park commented on your moment", time: "2 days ago", unread: false },
+  { id: "n1", text: "Maya Chen loved your Moment", time: "1h ago", unread: true, href: "/profile" },
+  { id: "n2", text: "Jordan Hale invited you to Porch soup night", time: "3h ago", unread: true, href: "/events" },
+  { id: "n3", text: "Sam Rivera accepted your friend request", time: "Yesterday", unread: false, href: "/profile/sam" },
+  { id: "n4", text: "Nova Park commented on your Moment", time: "2 days ago", unread: false, href: "/profile" },
 ];
 
 export const videos: VideoItem[] = [
