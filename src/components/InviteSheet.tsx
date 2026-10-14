@@ -132,7 +132,7 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-ink-900/90 px-4 py-2 text-sm text-cream-50 shadow-soft"
+          className="pointer-events-none fixed left-1/2 top-6 z-[60] -translate-x-1/2 rounded-full border border-ink-100 bg-cream-50 px-4 py-2 text-sm text-ink-800 shadow-soft sm:bottom-24 sm:top-auto"
         >
           {toast}
         </div>

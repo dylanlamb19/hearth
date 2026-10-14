@@ -19,9 +19,14 @@ export default function FriendsPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl text-ink-900">Friends</h1>
-        <p className="mt-1 text-sm text-ink-500">Requests, suggestions, and the people who belong in this room.</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl text-ink-900">Friends</h1>
+          <p className="mt-1 text-sm text-ink-500">The people who belong in this room.</p>
+        </div>
+        <Button variant="secondary" onClick={() => setInviteOpen(true)}>
+          Invite someone in
+        </Button>
       </div>
 
       {friends.length === 0 ? (
