@@ -12,9 +12,9 @@ export default function InviteLandingPage() {
   const code = (params?.code || "").trim();
 
   return (
-    <div className="min-h-screen bg-cream-100">
+    <div className="flex min-h-screen flex-col bg-cream-100">
       <PublicHeader />
-      <main className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center sm:py-24">
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center px-4 py-16 text-center sm:py-24">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">You’re invited</p>
         <h1 className="mt-3 font-display text-4xl text-ink-900 text-balance">Someone saved you a seat</h1>
         <p className="mt-4 text-lg leading-relaxed text-ink-600 text-balance">

@@ -7,7 +7,7 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const serif = Libre_Baskerville({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-serif" });
 
 export const metadata: Metadata = {
-  title: "Hearth — Gather around.",
+  title: { default: "Hearth — Gather around.", template: "%s · Hearth" },
   description: "A quieter social network for the people you already know.",
 };
 

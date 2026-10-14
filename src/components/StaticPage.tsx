@@ -18,9 +18,9 @@ export function StaticPage({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-cream-100">
+    <div className="flex min-h-screen flex-col bg-cream-100">
       <PublicHeader />
-      <main className="mx-auto max-w-3xl px-4 py-12">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">Hearth</p>
           {draft && (
