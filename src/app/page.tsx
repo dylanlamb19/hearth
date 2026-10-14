@@ -7,7 +7,7 @@ import { Button } from "@/components/Button";
 const features = [
   { title: "A quieter feed", body: "Moments, photos, video, and comments from people you actually chose." },
   { title: "Moments", body: "Photos that last a day. Enough time to see them, not enough to archive them." },
-  { title: "Friends, for real", body: "Requests, suggestions, and a contacts list that stays on the side of the room." },
+  { title: "Friends, for real", body: "A contacts list that stays on the side of the room." },
   { title: "Chat", body: "One-to-one messages. No rooms, no noise." },
   { title: "Groups & events", body: "Cooking clubs, trail notes, listening rooms. RSVP and show up." },
   { title: "Marketplace", body: "Bikes, skillets, stools, cuttings. Local and priced in dollars." },
@@ -15,9 +15,9 @@ const features = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-cream-100">
+    <div className="flex min-h-screen flex-col bg-cream-100">
       <PublicHeader />
-      <main>
+      <main className="flex-1">
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 lg:grid-cols-2 lg:py-20">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">A social network</p>
