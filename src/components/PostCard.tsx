@@ -79,7 +79,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article
       id={post.id}
-      className={`scroll-mt-20 rounded-3xl border border-ink-100 bg-white p-4 shadow-card ring-4 transition-shadow duration-[1500ms] sm:p-5 ${highlight ? "ring-cream-100" : "ring-transparent"}`}
+      className={`scroll-mt-20 rounded-3xl border border-ink-100 bg-white p-4 shadow-card ring-4 transition-shadow duration-[1500ms] sm:p-5 ${highlight ? "ring-ember-100" : "ring-transparent"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
