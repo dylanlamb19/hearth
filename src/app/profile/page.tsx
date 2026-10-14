@@ -8,11 +8,15 @@ import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
 import { useAuth } from "@/components/AuthProvider";
+import { EditProfileSheet } from "@/components/EditProfileSheet";
+import { useState } from "react";
 import { posts } from "@/data/seed";
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const mine = posts.filter((p) => p.authorId === user?.id);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const mine = posts.filter((p) => p.authorId === user?.id && !deletedIds.includes(p.id));
   // This route is the signed-in user's own profile.
   const isOwnProfile = Boolean(user);
 
@@ -24,7 +28,7 @@ export default function ProfilePage() {
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
               <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={user?.name || "You"} size="xl" />
+                <Avatar name={user?.name || "You"} size="xl" photoUrl={user?.photoUrl} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>
@@ -41,11 +45,13 @@ export default function ProfilePage() {
                   Share a Moment
                 </Link>
               )}
-              <Button variant="secondary" className="w-full sm:w-auto">Edit profile</Button>
+              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setEditOpen(true)}>
+                Edit profile
+              </Button>
             </div>
           </div>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-600">
-            Keeping the lights low and the kettle on. Friends-only by default. You decide who sits at this table.
+            {user?.bio || "Keeping the lights low and the kettle on. Friends-only by default. You decide who sits at this table."}
           </p>
           <div className="mt-4 rounded-2xl bg-cream-100 px-4 py-3 text-xs text-ink-600">
             Privacy: your profile is visible to friends. Use report and block anytime. Read more in our{" "}
@@ -127,9 +133,16 @@ export default function ProfilePage() {
             actionHref="/home?compose=1"
           />
         ) : (
-          mine.map((post) => <PostCard key={post.id} post={post} />)
+          mine.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onDelete={(id) => setDeletedIds((prev) => [...prev, id])}
+            />
+          ))
         )}
       </div>
+      <EditProfileSheet open={editOpen} onClose={() => setEditOpen(false)} />
     </AppShell>
   );
 }

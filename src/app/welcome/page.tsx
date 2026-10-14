@@ -6,37 +6,20 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { Avatar } from "@/components/Avatar";
+import { ProfileIdentityFields, identityValidation } from "@/components/ProfileIdentityFields";
 import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
+import { followSuggestions } from "@/lib/social";
+import { INTERESTS } from "@/lib/interests";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";
 
-const INTERESTS = [
-  "trails",
-  "cooking",
-  "design",
-  "music",
-  "markets",
-  "plants",
-  "reading",
-  "neighbors",
-  "baking",
-  "bikes",
-] as const;
-
-function isHandleTaken(handle: string, selfId?: string) {
-  const h = handle.toLowerCase();
-  if (!h) return false;
-  const owner = people.find((p) => p.handle.toLowerCase() === h);
-  if (!owner) return false;
-  if (selfId && owner.id === selfId) return false;
-  return true;
-}
 
 export default function WelcomePage() {
   const { user, ready, completeOnboarding, updateUser } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [bio, setBio] = useState("");
+  const [name, setName] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [handle, setHandle] = useState("");
   const [handleReady, setHandleReady] = useState(false);
@@ -45,8 +28,9 @@ export default function WelcomePage() {
   const [interestNote, setInterestNote] = useState("");
 
   const suggestions = useMemo(
-    () => people.filter((p) => p.id !== user?.id).slice(0, 8),
-    [user?.id],
+    // Never offer people you're already connected to.
+    () => followSuggestions(user).slice(0, 8),
+    [user],
   );
 
   useEffect(() => {
@@ -62,9 +46,7 @@ export default function WelcomePage() {
     setHandleReady(true);
   }, [user, handleReady]);
 
-  const effectiveHandle = normalizeHandle(handle);
-  const handleTaken = isHandleTaken(effectiveHandle, user?.id);
-  const handleInvalid = effectiveHandle.length < 3 || handleTaken;
+  const { effectiveHandle, handleInvalid } = identityValidation(handle, user?.id);
 
   if (!ready) {
     return (
@@ -114,6 +96,7 @@ export default function WelcomePage() {
   function continueFromIdentity() {
     if (handleInvalid) return;
     updateUser({
+      name: name.trim() || user!.name,
       bio: bio.trim() || undefined,
       photoUrl: photoUrl.trim() || undefined,
       handle: effectiveHandle,
@@ -147,62 +130,17 @@ export default function WelcomePage() {
           <div className="space-y-4 text-center">
             <h1 className="font-display text-3xl text-ink-900">Face the room</h1>
             <p className="text-sm text-ink-500">Add a photo, a handle, and a one-line bio so people know who is at the table.</p>
-            <div className="mx-auto flex justify-center">
-              <Avatar name={user.name} size="xl" />
-            </div>
-            <label className="block text-left text-sm">
-              <span className="mb-1.5 block text-ink-600">Handle</span>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-ink-400">@</span>
-                <input
-                  id="welcome-handle"
-                  name="handle"
-                  value={handle}
-                  onChange={(e) => setHandle(normalizeHandle(e.target.value))}
-                  placeholder={handleFromName(user.name)}
-                  autoComplete="username"
-                  spellCheck={false}
-                  className={cn(
-                    "w-full rounded-2xl border bg-cream-50 py-3 pl-9 pr-4 text-sm focus:ring-ember-300",
-                    handleInvalid
-                      ? "border-ember-300 focus:border-ember-400"
-                      : "border-ink-200 focus:border-ember-400",
-                  )}
-                  aria-invalid={handleInvalid}
-                  aria-describedby="handle-hint"
-                />
-              </div>
-              <span id="handle-hint" className="mt-1.5 block text-xs text-ink-400">
-                {handleTaken
-                  ? "That handle is already taken on Hearth. Try another."
-                  : effectiveHandle.length > 0 && effectiveHandle.length < 3
-                    ? "Use at least 3 characters."
-                    : "Prefilled from your name. You can edit it."}
-              </span>
-            </label>
-            <label className="block text-left text-sm">
-              <span className="mb-1.5 block text-ink-600">Photo URL (optional)</span>
-              <input
-                id="welcome-photo"
-                name="photoUrl"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                placeholder="https://…"
-                className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-sm focus:border-ember-400 focus:ring-ember-300"
-              />
-            </label>
-            <label className="block text-left text-sm">
-              <span className="mb-1.5 block text-ink-600">One-line bio</span>
-              <input
-                id="welcome-bio"
-                name="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="What friends should know"
-                maxLength={120}
-                className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-sm focus:border-ember-400 focus:ring-ember-300"
-              />
-            </label>
+            <ProfileIdentityFields
+              selfId={user.id}
+              values={{ name: name || user.name, handle, photoUrl, bio }}
+              onChange={(next) => {
+                setName(next.name);
+                setHandle(next.handle);
+                setPhotoUrl(next.photoUrl);
+                setBio(next.bio);
+              }}
+              idPrefix="welcome"
+            />
             <p className="text-left text-xs text-ink-400">
               You control who sees your Moments; default is Friends once you have a circle.{" "}
               <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>
@@ -278,7 +216,7 @@ export default function WelcomePage() {
         {step === 2 && (
           <div className="space-y-4 text-center">
             <h1 className="font-display text-3xl text-ink-900">Find your people</h1>
-            <p className="text-sm text-ink-500">People on Hearth you might enjoy — no fake mutuals.</p>
+            <p className="text-sm text-ink-500">People on Hearth you might enjoy.</p>
             <div className="max-h-72 space-y-2 overflow-y-auto text-left">
               {suggestions.map((p) => {
                 const selected = selectedPeople.includes(p.id);

@@ -9,12 +9,14 @@ import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
+import { Button } from "@/components/Button";
+import { isFollowing, isFriend, toggleFollowingIds } from "@/lib/social";
 import { personByHandle, posts, resolveHandle } from "@/data/seed";
 
 export default function PublicProfilePage() {
   const params = useParams<{ handle: string }>();
   const handle = resolveHandle(params?.handle || "");
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const seeded = personByHandle(handle);
   const isSessionMatch = Boolean(user && resolveHandle(user.handle) === handle);
@@ -71,7 +73,23 @@ export default function PublicProfilePage() {
                   Your profile
                 </Link>
               ) : (
-                <ReportMenu subject={profile.name} subjectId={profile.id} />
+                <>
+                  {isFriend(user, profile.id) ? (
+                    <span className="rounded-full bg-cream-100 px-4 py-2 text-sm text-ink-600 ring-1 ring-ink-100">Friends</span>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      aria-pressed={isFollowing(user, profile.id)}
+                      onClick={() => updateUser({ followingIds: toggleFollowingIds(user, profile.id) })}
+                    >
+                      {isFollowing(user, profile.id) ? "Following" : "Follow"}
+                    </Button>
+                  )}
+                  <Button variant="primary" href={`/messages?with=${encodeURIComponent(profile.id)}`}>
+                    Message
+                  </Button>
+                  <ReportMenu subject={profile.name} subjectId={profile.id} />
+                </>
               )}
             </div>
           </div>
