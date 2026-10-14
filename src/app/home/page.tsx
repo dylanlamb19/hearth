@@ -11,10 +11,13 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
+import { followSuggestions, followingIdsFor, friendIdsFor, isFollowing, toggleFollowingIds } from "@/lib/social";
 import { cn } from "@/lib/utils";
 
-const tabs = ["For you", "Following", "Friends", "Nearby"];
-const FIRST_MOMENT_PLACEHOLDER = "What's happening by the hearth?";
+// Nearby is hidden until there is real location data.
+const tabs = ["For you", "Following", "Friends"] as const;
+type FeedTab = (typeof tabs)[number];
+const FIRST_MOMENT_PLACEHOLDER = "What’s happening by the hearth?";
 
 function HearthMark({ className }: { className?: string }) {
   return (
@@ -32,12 +35,12 @@ function HearthMark({ className }: { className?: string }) {
 }
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const composerRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [compose, setCompose] = useState(false);
-  const [tab, setTab] = useState("For you");
+  const [tab, setTab] = useState<FeedTab>("For you");
   const [audience, setAudience] = useState<"friends" | "public">("friends");
   const [draft, setDraft] = useState("");
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
@@ -47,10 +50,26 @@ export default function HomePage() {
 
   // Re-read localStorage block list each render (free-tier, this device).
   const blockedIds = new Set(getBlockedIds());
-  const visibleFeed = feed.filter((post) => !blockedIds.has(post.authorId));
+  const unblockedFeed = feed.filter((post) => !blockedIds.has(post.authorId));
+  const followingIds = followingIdsFor(user);
+  const friendIds = friendIdsFor(user);
+  const visibleFeed =
+    tab === "Following"
+      ? unblockedFeed.filter((post) => followingIds.includes(post.authorId))
+      : tab === "Friends"
+        ? unblockedFeed.filter((post) => friendIds.includes(post.authorId))
+        : unblockedFeed;
   const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
+  // Keep people you follow from here visible (as "Following") until you leave the page.
+  const [followedHere, setFollowedHere] = useState<string[]>([]);
   const suggestions = people
-    .filter((p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id))
+    .filter(
+      (p) =>
+        p.id !== user?.id &&
+        p.id !== "u-ember" &&
+        (followSuggestions(user, blockedIds).some((s) => s.id === p.id) ||
+          (followedHere.includes(p.id) && !blockedIds.has(p.id))),
+    )
     .slice(0, 3);
   const contacts = people.filter(
     (p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id),
@@ -138,7 +157,7 @@ export default function HomePage() {
               Share a Moment
             </h2>
             <div className="flex items-center gap-3">
-              <Avatar name={user?.name || "You"} />
+              <Avatar name={user?.name || "You"} photoUrl={user?.photoUrl} />
               <input
                 ref={composerRef}
                 id="composer"
@@ -285,9 +304,32 @@ export default function HomePage() {
             ))}
           </div>
 
-          {visibleFeed.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+          {visibleFeed.length === 0 ? (
+            <div className="rounded-3xl border border-ink-100 bg-cream-50 px-5 py-8 text-center">
+              <p className="font-display text-xl text-ink-900">
+                {tab === "Following" ? "Nobody followed yet" : "No friends’ Moments yet"}
+              </p>
+              <p className="mt-2 text-sm text-ink-500">
+                {tab === "Following"
+                  ? "Follow a few people and their Moments will gather here."
+                  : "When friends share something, it’ll be waiting here."}
+              </p>
+              <Link href="/people" className="mt-4 inline-block text-sm font-medium text-ember-600 underline-offset-2 hover:underline">
+                Find people
+              </Link>
+            </div>
+          ) : (
+            visibleFeed.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onDelete={(id) => {
+                  setFeed((prev) => prev.filter((p) => p.id !== id));
+                  showToast("Moment deleted.");
+                }}
+              />
+            ))
+          )}
 
           <div className="h-16" aria-hidden />
 
@@ -325,9 +367,24 @@ export default function HomePage() {
                   <Avatar name={p.name} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink-800">{p.name}</p>
-                    <p className="text-xs text-ink-400">{p.mutuals} mutuals</p>
+                    <p className="truncate text-xs text-ink-400">@{p.handle}</p>
                   </div>
-                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs">Follow</Button>
+                  {(() => {
+                    const followingThem = isFollowing(user, p.id);
+                    return (
+                      <Button
+                        variant={followingThem ? "secondary" : "primary"}
+                        className="!px-3 !py-1.5 text-xs"
+                        aria-pressed={followingThem}
+                        onClick={() => {
+                          updateUser({ followingIds: toggleFollowingIds(user, p.id) });
+                          setFollowedHere((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]));
+                        }}
+                      >
+                        {followingThem ? "Following" : "Follow"}
+                      </Button>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

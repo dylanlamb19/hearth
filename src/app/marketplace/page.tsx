@@ -15,7 +15,7 @@ export default function MarketplacePage() {
         <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-ink-100 bg-cream-100 px-4 py-3 text-sm text-ink-600">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ember-500" aria-hidden />
           <p>
-            Local pickups only. Meet in public, trust your gut, never send money in chat. Hearth doesn’t hold funds.{" "}
+            Meet somewhere public, and pay when you have the item in hand.{" "}
             <Link
               href="/help#marketplace"
               className="font-medium text-ember-600 underline-offset-2 hover:underline"
