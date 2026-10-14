@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
@@ -8,26 +9,34 @@ import { EmptyState } from "@/components/EmptyState";
 import { conversations, personById } from "@/data/seed";
 
 export default function MessagesPage() {
-  const [active, setActive] = useState<string | undefined>(conversations[0]?.id);
-  // A thread started from Marketplace with a seller who has no conversation yet.
-  const [draftPeerId, setDraftPeerId] = useState<string | null>(null);
-  const [reply, setReply] = useState("");
+  return (
+    <Suspense fallback={null}>
+      <MessagesInner />
+    </Suspense>
+  );
+}
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const withId = params.get("with");
-    const about = params.get("about");
-    if (!withId || !personById(withId)) return;
+/** Thread chosen from ?with=<personId> on first render, so no other thread flashes first. */
+function initialThread(withId: string | null) {
+  if (withId && personById(withId)) {
     const existing = conversations.find((c) => c.peerId === withId);
-    if (existing) {
-      setActive(existing.id);
-      setDraftPeerId(null);
-    } else {
-      setActive(undefined);
-      setDraftPeerId(withId);
-    }
-    if (about) setReply(`About: ${about} `);
-  }, []);
+    if (existing) return { active: existing.id as string | undefined, draftPeerId: null as string | null };
+    return { active: undefined, draftPeerId: withId };
+  }
+  return { active: conversations[0]?.id, draftPeerId: null };
+}
+
+function MessagesInner() {
+  const searchParams = useSearchParams();
+  const [init] = useState(() => initialThread(searchParams.get("with")));
+  const [active, setActive] = useState<string | undefined>(init.active);
+  // A thread started from Marketplace with a seller who has no conversation yet.
+  const [draftPeerId, setDraftPeerId] = useState<string | null>(init.draftPeerId);
+  const [reply, setReply] = useState(() => {
+    const about = searchParams.get("about");
+    const withId = searchParams.get("with");
+    return about && withId && personById(withId) ? `About: ${about} ` : "";
+  });
 
   const current = draftPeerId ? undefined : conversations.find((c) => c.id === active);
   const peer = draftPeerId ? personById(draftPeerId) : current ? personById(current.peerId) : null;
@@ -98,6 +107,7 @@ export default function MessagesPage() {
                 <div className="max-w-[80%] rounded-2xl rounded-tl-md bg-cream-100 px-4 py-3 text-sm text-ink-800">
                   {current.preview}
                 </div>
+                {/* Demo-only reply, shown on seeded threads until real messages land. */}
                 <div className="ml-auto max-w-[80%] rounded-2xl rounded-tr-md bg-hearth px-4 py-3 text-sm text-white">
                   Sounds good — see you soon.
                 </div>
