@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
 import { Button } from "./Button";
 import { addBlockedId } from "@/lib/blocked";
@@ -13,6 +13,9 @@ const REPORT_REASONS = [
   "Other",
 ] as const;
 type ReportReason = (typeof REPORT_REASONS)[number];
+
+/** Broadcast so only one ··· menu is open at a time. */
+const MENU_OPEN_EVENT = "hearth:report-menu-open";
 
 type Sheet =
   | { kind: "report"; reason: ReportReason | null; note: string }
@@ -30,6 +33,37 @@ export function ReportMenu({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onOtherOpen = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== menuId) setMenuOpen(false);
+    };
+    window.addEventListener(MENU_OPEN_EVENT, onOtherOpen);
+    return () => window.removeEventListener(MENU_OPEN_EVENT, onOtherOpen);
+  }, [menuId]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [menuOpen]);
+
+  function toggleMenu() {
+    if (!menuOpen) window.dispatchEvent(new CustomEvent(MENU_OPEN_EVENT, { detail: menuId }));
+    setMenuOpen(!menuOpen);
+  }
 
   useEffect(() => {
     if (!sheet) return;
@@ -72,12 +106,12 @@ export function ReportMenu({
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
         type="button"
         aria-label="More actions"
         aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((v) => !v)}
+        onClick={toggleMenu}
         className="rounded-full p-1.5 text-ink-400 hover:bg-cream-200 hover:text-ink-700"
       >
         <MoreHorizontal className="h-5 w-5" />
@@ -172,7 +206,7 @@ export function ReportMenu({
       {sheet?.kind === "block-confirm" && (
         <CreamSheet
           title={`Block ${subject}?`}
-          description={`Block ${subject}? They won’t show up in your feed or search.`}
+          description="They won’t see your Moments, and you won’t see theirs. You can undo this in Settings."
           onClose={() => setSheet(null)}
         >
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
