@@ -8,6 +8,7 @@ import { Button } from "@/components/Button";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
+import { followSuggestions } from "@/lib/social";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";
 
 const INTERESTS = [
@@ -44,8 +45,9 @@ export default function WelcomePage() {
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
 
   const suggestions = useMemo(
-    () => people.filter((p) => p.id !== user?.id).slice(0, 8),
-    [user?.id],
+    // Never offer people you're already connected to.
+    () => followSuggestions(user).slice(0, 8),
+    [user],
   );
 
   useEffect(() => {
@@ -262,7 +264,7 @@ export default function WelcomePage() {
         {step === 2 && (
           <div className="space-y-4 text-center">
             <h1 className="font-display text-3xl text-ink-900">Find your people</h1>
-            <p className="text-sm text-ink-500">People on Hearth you might enjoy — no fake mutuals.</p>
+            <p className="text-sm text-ink-500">People on Hearth you might enjoy.</p>
             <div className="max-h-72 space-y-2 overflow-y-auto text-left">
               {suggestions.map((p) => {
                 const selected = selectedPeople.includes(p.id);

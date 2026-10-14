@@ -9,13 +9,16 @@ import { EmptyState } from "@/components/EmptyState";
 import { InviteSheet } from "@/components/InviteSheet";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
-import { people } from "@/data/seed";
+import { personById } from "@/data/seed";
+import { friendIdsFor } from "@/lib/social";
 
 export default function FriendsPage() {
   const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
-  // Demo MVP: treat seed roster as friends except the signed-in account
-  const friends = people.filter((p) => p.id !== user?.id && p.id !== "u-local");
+  // Demo friends come from the shared social model (same list Home's Friends tab uses).
+  const friends = friendIdsFor(user)
+    .map((id) => personById(id))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
     <AppShell>

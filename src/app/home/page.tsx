@@ -11,6 +11,7 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
+import { followSuggestions, toggleFollowingIds } from "@/lib/social";
 import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
@@ -32,7 +33,7 @@ function HearthMark({ className }: { className?: string }) {
 }
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const composerRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,9 +50,7 @@ export default function HomePage() {
   const blockedIds = new Set(getBlockedIds());
   const visibleFeed = feed.filter((post) => !blockedIds.has(post.authorId));
   const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
-  const suggestions = people
-    .filter((p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id))
-    .slice(0, 3);
+  const suggestions = followSuggestions(user, blockedIds).slice(0, 3);
   const contacts = people.filter(
     (p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id),
   );
@@ -322,9 +321,18 @@ export default function HomePage() {
                   <Avatar name={p.name} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink-800">{p.name}</p>
-                    <p className="text-xs text-ink-400">{p.mutuals} mutuals</p>
+                    <p className="truncate text-xs text-ink-400">@{p.handle}</p>
                   </div>
-                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs">Follow</Button>
+                  <Button
+                    variant="secondary"
+                    className="!px-3 !py-1.5 text-xs"
+                    onClick={() => {
+                      updateUser({ followingIds: toggleFollowingIds(user, p.id) });
+                      showToast(`Following ${p.name.split(" ")[0]}`);
+                    }}
+                  >
+                    Follow
+                  </Button>
                 </div>
               ))}
             </div>
