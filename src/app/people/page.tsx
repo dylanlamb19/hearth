@@ -10,22 +10,10 @@ import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
+import { INTERESTS } from "@/lib/interests";
 import { cn } from "@/lib/utils";
 import { isFollowing, isFriend, toggleFollowingIds } from "@/lib/social";
 
-/** Same 10 interests as welcome step 2. */
-const INTERESTS = [
-  "trails",
-  "cooking",
-  "design",
-  "music",
-  "markets",
-  "plants",
-  "reading",
-  "neighbors",
-  "baking",
-  "bikes",
-] as const;
 
 function PeoplePageContent() {
   const { user, updateUser } = useAuth();

@@ -3,7 +3,6 @@ export type Person = {
   name: string;
   handle: string;
   bio: string;
-  mutuals: number;
   /** Matches the 10 welcome interests so People chips always find someone. */
   interests?: string[];
   online?: boolean;
@@ -98,14 +97,14 @@ export type Clip = {
 };
 
 export const people: Person[] = [
-  { id: "u-ember", name: "Ember", handle: "ember", bio: "Keeping the lights low and the kettle on.", mutuals: 0, online: true, interests: ["cooking", "reading", "neighbors"] },
-  { id: "u-kindling", name: "Kindling", handle: "kindling", bio: "Soft invites. One seat at a time.", mutuals: 0, online: true, interests: ["neighbors", "design", "markets"] },
-  { id: "u-maya", name: "Maya Chen", handle: "maya", bio: "Trail notes and quiet mornings.", mutuals: 12, online: true, birthday: "Today", interests: ["trails", "plants", "baking"] },
-  { id: "u-jordan", name: "Jordan Hale", handle: "jordan", bio: "Cooks for friends. Rarely posts.", mutuals: 8, online: false, interests: ["cooking", "baking", "neighbors"] },
-  { id: "u-sam", name: "Sam Rivera", handle: "sam", bio: "Vinyl, bikes, and porch light.", mutuals: 5, online: true, interests: ["music", "bikes", "markets"] },
-  { id: "u-nova", name: "Nova Park", handle: "nova", bio: "Design that feels like home.", mutuals: 3, online: false, interests: ["design", "plants", "reading"] },
-  { id: "u-leo", name: "Leo Brooks", handle: "leo", bio: "Weekend markets and sketchbooks.", mutuals: 7, online: true, interests: ["markets", "design", "bikes"] },
-  { id: "u-aria", name: "Aria Quinn", handle: "aria", bio: "Listening rooms and long walks.", mutuals: 4, online: false, interests: ["music", "reading", "trails"] },
+  { id: "u-ember", name: "Ember", handle: "ember", bio: "Keeping the lights low and the kettle on.", online: true, interests: ["cooking", "reading", "neighbors"] },
+  { id: "u-kindling", name: "Kindling", handle: "kindling", bio: "Soft invites. One seat at a time.", online: true, interests: ["neighbors", "design", "markets"] },
+  { id: "u-maya", name: "Maya Chen", handle: "maya", bio: "Trail notes and quiet mornings.", online: true, birthday: "Today", interests: ["trails", "plants", "baking"] },
+  { id: "u-jordan", name: "Jordan Hale", handle: "jordan", bio: "Cooks for friends. Rarely posts.", online: false, interests: ["cooking", "baking", "neighbors"] },
+  { id: "u-sam", name: "Sam Rivera", handle: "sam", bio: "Vinyl, bikes, and porch light.", online: true, interests: ["music", "bikes", "markets"] },
+  { id: "u-nova", name: "Nova Park", handle: "nova", bio: "Design that feels like home.", online: false, interests: ["design", "plants", "reading"] },
+  { id: "u-leo", name: "Leo Brooks", handle: "leo", bio: "Weekend markets and sketchbooks.", online: true, interests: ["markets", "design", "bikes"] },
+  { id: "u-aria", name: "Aria Quinn", handle: "aria", bio: "Listening rooms and long walks.", online: false, interests: ["music", "reading", "trails"] },
 ];
 
 /** Legacy email-local-part handles that resolve to a seeded person. */

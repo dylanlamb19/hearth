@@ -9,20 +9,9 @@ import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
 import { followSuggestions } from "@/lib/social";
+import { INTERESTS } from "@/lib/interests";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";
 
-const INTERESTS = [
-  "trails",
-  "cooking",
-  "design",
-  "music",
-  "markets",
-  "plants",
-  "reading",
-  "neighbors",
-  "baking",
-  "bikes",
-] as const;
 
 function isHandleTaken(handle: string, selfId?: string) {
   const h = handle.toLowerCase();
