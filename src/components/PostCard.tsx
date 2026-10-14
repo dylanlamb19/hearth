@@ -8,6 +8,7 @@ import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
 import { useAuth } from "./AuthProvider";
+import { isSaved, toggleSaved } from "@/lib/saved";
 
 function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
@@ -17,6 +18,7 @@ export function PostCard({ post }: { post: Post }) {
   const { user } = useAuth();
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seedAuthor = personById(post.authorId);
   const author =
@@ -31,6 +33,10 @@ export function PostCard({ post }: { post: Post }) {
           online: true,
         }
       : null);
+
+  useEffect(() => {
+    setSaved(isSaved(post.id));
+  }, [post.id]);
 
   useEffect(() => {
     return () => {
@@ -60,6 +66,12 @@ export function PostCard({ post }: { post: Post }) {
     } catch {
       showToast("Sharing soon");
     }
+  }
+
+  function handleSaveClick() {
+    const nowSaved = toggleSaved(post);
+    setSaved(nowSaved);
+    showToast(nowSaved ? "Saved for later" : "Removed from saved");
   }
 
   return (
@@ -112,8 +124,13 @@ export function PostCard({ post }: { post: Post }) {
         >
           <Share2 className="h-4 w-4" /> Share
         </button>
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <Bookmark className="h-4 w-4" /> Save
+        <button
+          type="button"
+          onClick={handleSaveClick}
+          aria-pressed={saved}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100 ${saved ? "text-amber-600" : ""}`}
+        >
+          <Bookmark className="h-4 w-4" fill={saved ? "currentColor" : "none"} /> {saved ? "Saved" : "Save"}
         </button>
       </div>
 
@@ -128,7 +145,7 @@ export function PostCard({ post }: { post: Post }) {
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900/90 px-4 py-2 text-sm text-cream-50 shadow-soft"
+          className="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full border border-ink-100 bg-cream-50 px-4 py-2 text-sm text-ink-800 shadow-soft"
         >
           {toast}
         </div>

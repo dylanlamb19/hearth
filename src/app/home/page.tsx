@@ -191,8 +191,14 @@ export default function HomePage() {
               >
                 <Video className="h-4 w-4 text-ember-500" /> Video
               </button>
-              <button type="button" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 hover:bg-cream-100">
-                <Smile className="h-4 w-4 text-ember-500" /> Feeling
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="Coming soon"
+                className="inline-flex cursor-not-allowed items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 opacity-60"
+              >
+                <Smile className="h-4 w-4 text-ember-500" /> Feeling · Coming soon
               </button>
             </div>
             {attachedImage && (
