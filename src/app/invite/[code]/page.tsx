@@ -41,7 +41,7 @@ export default function InviteLandingPage() {
             </p>
             <div className="mt-8 flex w-full max-w-xs flex-col gap-2">
               <Button href={`/signup${q}`} variant="primary" className="w-full">
-                Create your account
+                Create account
               </Button>
               <Button href={`/login${q}`} variant="secondary" className="w-full">
                 Sign in
