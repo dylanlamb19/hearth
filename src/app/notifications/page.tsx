@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EmptyState } from "@/components/EmptyState";
 import { notifications as seedNotes } from "@/data/seed";
+import { relTime } from "@/lib/format";
 
 export default function NotificationsPage() {
   return (
@@ -28,7 +29,7 @@ export default function NotificationsPage() {
             >
               <div>
                 <p className="text-sm text-ink-800">{n.text}</p>
-                <p className="mt-1 text-xs text-ink-400">{n.time}</p>
+                <p className="mt-1 text-xs text-ink-400">{relTime(n.time)}</p>
               </div>
               {n.unread && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-ember-500" />}
             </div>

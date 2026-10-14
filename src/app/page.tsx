@@ -5,12 +5,12 @@ import { PublicFooter } from "@/components/PublicFooter";
 import { Button } from "@/components/Button";
 
 const features = [
-  { title: "A quieter feed", body: "Posts, photos, video, and comments from people you actually chose." },
+  { title: "A quieter feed", body: "Moments, photos, video, and comments from people you actually chose." },
   { title: "Moments", body: "Photos that last a day. Enough time to see them, not enough to archive them." },
   { title: "Friends, for real", body: "Requests, suggestions, and a contacts list that stays on the side of the room." },
   { title: "Chat", body: "One-to-one messages. No rooms, no noise." },
   { title: "Groups & events", body: "Cooking clubs, trail notes, listening rooms. RSVP and show up." },
-  { title: "Market", body: "Bikes, skillets, stools, cuttings. Local and priced in dollars." },
+  { title: "Marketplace", body: "Bikes, skillets, stools, cuttings. Local and priced in dollars." },
 ];
 
 export default function LandingPage() {

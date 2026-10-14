@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { conversations, personById } from "@/data/seed";
+import { relTime } from "@/lib/format";
 
 export default function MessagesPage() {
   const [active, setActive] = useState(conversations[0]?.id);
@@ -45,7 +46,7 @@ export default function MessagesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
-                      <span className="text-[11px] text-ink-400">{c.updatedAt}</span>
+                      <span className="text-[11px] text-ink-400">{relTime(c.updatedAt)}</span>
                     </div>
                     <p className="truncate text-xs text-ink-500">{c.preview}</p>
                   </div>
@@ -72,6 +73,9 @@ export default function MessagesPage() {
             </div>
             <form className="border-t border-ink-100 p-3" onSubmit={(e) => e.preventDefault()}>
               <input
+                id="message-reply"
+                name="reply"
+                aria-label="Reply"
                 placeholder="Write a quiet reply…"
                 className="w-full rounded-full border-ink-200 bg-cream-50 px-4 py-3 text-sm focus:border-ember-400 focus:ring-ember-300"
               />

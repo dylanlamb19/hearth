@@ -4,6 +4,7 @@ import { Listing, personById } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { ReportMenu } from "./ReportMenu";
+import { relTime } from "@/lib/format";
 
 export function MarketplaceCard({ listing }: { listing: Listing }) {
   const seller = personById(listing.sellerId);
@@ -31,7 +32,7 @@ export function MarketplaceCard({ listing }: { listing: Listing }) {
           <span className="rounded-full bg-cream-200 px-2.5 py-1 text-ink-700">{listing.condition}</span>
           <span>{listing.distance}</span>
           <span>·</span>
-          <span>{listing.postedAt}</span>
+          <span>{relTime(listing.postedAt)}</span>
         </div>
         <p className="mt-3 text-sm text-ink-600">{listing.description}</p>
         {seller && (
