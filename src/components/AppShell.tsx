@@ -12,6 +12,7 @@ import { Avatar } from "./Avatar";
 import { useAuth } from "./AuthProvider";
 import { NotificationPermissionHost } from "./NotificationPermissionHost";
 import { needsOnboarding } from "@/lib/auth";
+import { useUnreadCount } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const unreadCount = useUnreadCount();
 
   useEffect(() => {
     if (ready && !user) router.replace("/login");
@@ -82,6 +84,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Icon className="h-5 w-5" />
             {item.label}
+            {item.href === "/notifications" && unreadCount > 0 && (
+              <span className="ml-auto rounded-full bg-ember-100 px-2 py-0.5 text-[11px] font-medium text-ember-700">
+                {unreadCount}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -129,8 +136,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/messages" className="rounded-full p-2 text-ink-600 hover:bg-cream-200" aria-label="Messages">
               <MessageCircle className="h-5 w-5" />
             </Link>
-            <Link href="/notifications" className="rounded-full p-2 text-ink-600 hover:bg-cream-200" aria-label="Notifications">
+            <Link
+              href="/notifications"
+              className="relative rounded-full p-2 text-ink-600 hover:bg-cream-200"
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+            >
               <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember-500 px-1 text-[10px] font-semibold leading-none text-white">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
             <Link href="/profile" className="rounded-full p-1 hover:bg-cream-200" aria-label="Profile">
               <Avatar name={user.name} size="sm" />

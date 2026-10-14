@@ -74,6 +74,8 @@ export type Notification = {
   text: string;
   time: string;
   unread: boolean;
+  /** Where tapping the row goes (post anchor, profile, or event). */
+  href: string;
 };
 
 export type VideoItem = {
@@ -264,10 +266,10 @@ export const conversations: Conversation[] = [
 ];
 
 export const notifications: Notification[] = [
-  { id: "n1", text: "Maya Chen loved your post", time: "1h ago", unread: true },
-  { id: "n2", text: "Jordan Hale invited you to Porch soup night", time: "3h ago", unread: true },
-  { id: "n3", text: "Sam Rivera accepted your friend request", time: "Yesterday", unread: false },
-  { id: "n4", text: "Nova Park commented on your moment", time: "2 days ago", unread: false },
+  { id: "n1", text: "Maya Chen loved your post", time: "1h ago", unread: true, href: "/profile" },
+  { id: "n2", text: "Jordan Hale invited you to Porch soup night", time: "3h ago", unread: true, href: "/events" },
+  { id: "n3", text: "Sam Rivera accepted your friend request", time: "Yesterday", unread: false, href: "/profile/sam" },
+  { id: "n4", text: "Nova Park commented on your Moment", time: "2 days ago", unread: false, href: "/profile" },
 ];
 
 export const videos: VideoItem[] = [
