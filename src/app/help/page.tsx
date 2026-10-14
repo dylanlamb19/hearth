@@ -19,7 +19,7 @@ export default function HelpPage() {
       </p>
       <p id="marketplace">
         <strong className="font-medium text-ink-800">Marketplace tip.</strong>{" "}
-        Meet in public if you can — trust your gut. Local pickups only; never send money in chat. Hearth doesn’t hold funds.
+        Meet somewhere public, and pay when you have the item in hand.
       </p>
       <p>Need more help? Email support@hearth.demo — for this MVP, replies are simulated.</p>
     </StaticPage>
