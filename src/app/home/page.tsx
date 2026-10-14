@@ -11,7 +11,7 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
-import { followSuggestions, followingIdsFor, friendIdsFor, toggleFollowingIds } from "@/lib/social";
+import { followSuggestions, followingIdsFor, friendIdsFor, isFollowing, toggleFollowingIds } from "@/lib/social";
 import { cn } from "@/lib/utils";
 
 // Nearby is hidden until there is real location data.
@@ -60,7 +60,15 @@ export default function HomePage() {
         ? unblockedFeed.filter((post) => friendIds.includes(post.authorId))
         : unblockedFeed;
   const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
-  const suggestions = followSuggestions(user, blockedIds).slice(0, 3);
+  // Keep people you follow from here visible (as "Following") until you leave the page.
+  const [followedHere, setFollowedHere] = useState<string[]>([]);
+  const suggestions = people
+    .filter(
+      (p) =>
+        followSuggestions(user, blockedIds).some((s) => s.id === p.id) ||
+        (followedHere.includes(p.id) && !blockedIds.has(p.id)),
+    )
+    .slice(0, 3);
   const contacts = people.filter(
     (p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id),
   );
@@ -356,16 +364,22 @@ export default function HomePage() {
                     <p className="truncate text-sm font-medium text-ink-800">{p.name}</p>
                     <p className="truncate text-xs text-ink-400">@{p.handle}</p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    className="!px-3 !py-1.5 text-xs"
-                    onClick={() => {
-                      updateUser({ followingIds: toggleFollowingIds(user, p.id) });
-                      showToast(`Following ${p.name.split(" ")[0]}`);
-                    }}
-                  >
-                    Follow
-                  </Button>
+                  {(() => {
+                    const followingThem = isFollowing(user, p.id);
+                    return (
+                      <Button
+                        variant={followingThem ? "secondary" : "primary"}
+                        className="!px-3 !py-1.5 text-xs"
+                        aria-pressed={followingThem}
+                        onClick={() => {
+                          updateUser({ followingIds: toggleFollowingIds(user, p.id) });
+                          setFollowedHere((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]));
+                        }}
+                      >
+                        {followingThem ? "Following" : "Follow"}
+                      </Button>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

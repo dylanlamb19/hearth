@@ -66,7 +66,7 @@ export function PostCard({ post, onDelete }: { post: Post; onDelete?: (postId: s
       await navigator.clipboard.writeText(shareUrl);
       showToast("Link copied");
     } catch {
-      showToast("Sharing soon");
+      showToast("Couldn’t copy — try again.");
     }
   }
 
@@ -77,7 +77,7 @@ export function PostCard({ post, onDelete }: { post: Post; onDelete?: (postId: s
       : undefined);
 
   return (
-    <article id={post.id} className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card sm:p-5">
+    <article id={post.id} className="scroll-mt-20 rounded-3xl border border-ink-100 bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <Avatar name={author.name} online={author.online} />

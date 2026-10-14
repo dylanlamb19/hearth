@@ -15,7 +15,8 @@ import { posts } from "@/data/seed";
 export default function ProfilePage() {
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
-  const mine = posts.filter((p) => p.authorId === user?.id);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const mine = posts.filter((p) => p.authorId === user?.id && !deletedIds.includes(p.id));
   // This route is the signed-in user's own profile.
   const isOwnProfile = Boolean(user);
 
@@ -132,7 +133,13 @@ export default function ProfilePage() {
             actionHref="/home?compose=1"
           />
         ) : (
-          mine.map((post) => <PostCard key={post.id} post={post} />)
+          mine.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onDelete={(id) => setDeletedIds((prev) => [...prev, id])}
+            />
+          ))
         )}
       </div>
       <EditProfileSheet open={editOpen} onClose={() => setEditOpen(false)} />

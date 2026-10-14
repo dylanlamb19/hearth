@@ -66,6 +66,15 @@ export default function ClipsPage() {
   }, []);
 
   const total = visibleClips.length;
+
+  // Shared links (?clip=<id> or #<id>) open on that clip.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wanted = params.get("clip") || window.location.hash.replace(/^#/, "");
+    if (!wanted) return;
+    const i = visibleClips.findIndex((c) => c.id === wanted);
+    if (i >= 0) setIndex(i);
+  }, [visibleClips]);
   const clip = visibleClips[index];
   const author = clip ? personById(clip.authorId) : undefined;
   const [loved, toggleLoved] = useLoved(clip ? `clip:${clip.id}` : "clip:none");
@@ -84,12 +93,12 @@ export default function ClipsPage() {
 
   async function shareClip() {
     if (!clip) return;
-    const url = `${window.location.origin}/clips#${clip.id}`;
+    const url = `${window.location.origin}/clips?clip=${encodeURIComponent(clip.id)}`;
     try {
       await navigator.clipboard.writeText(url);
       showToast("Link copied");
     } catch {
-      showToast("Sharing soon");
+      showToast("Couldn’t copy — try again.");
     }
   }
 
