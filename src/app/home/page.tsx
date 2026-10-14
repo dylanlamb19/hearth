@@ -262,7 +262,7 @@ export default function HomePage() {
               </button>
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-400">
-              Friends = people you've connected with. Public = anyone on Hearth.
+              Friends = people you’ve connected with. Public = anyone on Hearth.
             </p>
           </section>
 
