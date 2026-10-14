@@ -56,7 +56,8 @@ export default function HomePage() {
     (p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id),
   );
 
-  const canShare = draft.trim().length > 0 || attachedImage !== null || videoStub;
+  // A stub video alone (no text, no photo) isn't shareable until uploads land.
+  const canShare = draft.trim().length > 0 || attachedImage !== null;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -104,11 +105,7 @@ export default function HomePage() {
     if (!canShare || !user) return;
     const body =
       draft.trim() ||
-      (attachedImage
-        ? "Shared a photo by the hearth."
-        : videoStub
-          ? "Shared a video by the hearth."
-          : "");
+      (attachedImage ? "Shared a photo by the hearth." : "");
     if (!body) return;
 
     const next: Post = {
@@ -136,11 +133,17 @@ export default function HomePage() {
         <div className="space-y-4">
           <OnboardingChecklist />
 
-          <section className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card">
+          <section className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card" aria-labelledby="composer-title">
+            <h2 id="composer-title" className="mb-3 font-display text-lg text-ink-900">
+              Share a Moment
+            </h2>
             <div className="flex items-center gap-3">
               <Avatar name={user?.name || "You"} />
               <input
                 ref={composerRef}
+                id="composer"
+                name="moment"
+                autoFocus={compose}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
@@ -149,9 +152,9 @@ export default function HomePage() {
                     handleShare();
                   }
                 }}
-                placeholder={compose ? FIRST_MOMENT_PLACEHOLDER : "What is on your mind?"}
+                placeholder={FIRST_MOMENT_PLACEHOLDER}
                 className="w-full rounded-full border-0 bg-cream-100 px-4 py-3 text-sm placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
-                aria-label="Compose a post"
+                aria-label="Share a Moment"
               />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -170,6 +173,8 @@ export default function HomePage() {
               </button>
               <input
                 ref={photoInputRef}
+                id="composer-photo"
+                name="photo"
                 type="file"
                 accept="image/*"
                 className="sr-only"
@@ -214,9 +219,6 @@ export default function HomePage() {
                   </button>
                 </div>
               </div>
-            )}
-            {videoStub && !attachedImage && (
-              <p className="mt-2 text-xs text-ink-400">Video attached (stub). Upload comes later.</p>
             )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5" role="group" aria-label="Who can see this">
@@ -266,14 +268,15 @@ export default function HomePage() {
             </p>
           </section>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
             {tabs.map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
+                aria-pressed={tab === t}
                 className={cn(
-                  "rounded-full px-4 py-2 text-sm",
+                  "shrink-0 rounded-full px-4 py-2 text-sm",
                   tab === t ? "bg-hearth text-white" : "bg-white text-ink-600 ring-1 ring-ink-100 hover:bg-cream-50",
                 )}
               >

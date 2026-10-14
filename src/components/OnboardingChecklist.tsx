@@ -5,17 +5,30 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { markFindPeoplePending } from "@/lib/notificationPermission";
 import { InviteSheet } from "./InviteSheet";
+import { useAuth } from "./AuthProvider";
+import type { SessionUser } from "@/lib/auth";
 
 const STORAGE_KEY = "hearth_checklist";
 
 const items = [
-  { href: "/profile", label: "Finish profile" },
-  { href: "/people", label: "Find people", notifyPending: true },
-  { href: "/home?compose=1", label: "Share a first Moment" },
+  {
+    href: "/profile",
+    label: "Finish profile",
+    done: (u: SessionUser | null) => Boolean(u?.onboardingCompletedAt || u?.photoUrl || u?.bio?.trim()),
+  },
+  {
+    href: "/people",
+    label: "Find people",
+    notifyPending: true,
+    done: (u: SessionUser | null) => (u?.followingIds?.length ?? 0) > 0,
+  },
+  { href: "/home?compose=1", label: "Share a first Moment", done: () => false },
 ] as const;
 
 export function OnboardingChecklist() {
-  const [visible, setVisible] = useState(false);
+  const { user } = useAuth();
+  // null = not read yet; reserve the card's space so the feed doesn't jump.
+  const [visible, setVisible] = useState<boolean | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
@@ -35,6 +48,9 @@ export function OnboardingChecklist() {
     setVisible(false);
   }
 
+  if (visible === null) {
+    return <div className="h-[19rem] rounded-3xl bg-cream-50 sm:h-[20rem]" aria-hidden />;
+  }
   if (!visible) return null;
 
   return (
@@ -66,8 +82,10 @@ export function OnboardingChecklist() {
                 }}
                 className="flex items-center justify-between rounded-2xl bg-cream-50 px-3 py-2.5 text-sm text-ink-800 ring-1 ring-ink-100 transition hover:bg-cream-100 hover:ring-ember-200"
               >
-                <span>{item.label}</span>
-                <span className="text-xs text-ink-400">Open</span>
+                <span className={item.done(user) ? "text-ink-500 line-through decoration-ink-300" : ""}>
+                  {item.label}
+                </span>
+                <span className="text-xs text-ink-400">{item.done(user) ? "Done" : "Open"}</span>
               </Link>
             </li>
           ))}

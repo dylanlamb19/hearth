@@ -51,6 +51,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   if (!ready || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream-100 text-ink-500">
@@ -108,7 +117,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Logo />
           <div className="relative mx-auto hidden w-full max-w-md md:block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <label htmlFor="header-search" className="sr-only">
+              Search Hearth
+            </label>
             <input
+              id="header-search"
+              name="q"
               type="search"
               placeholder="Search Hearth"
               className="w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-sm shadow-soft ring-1 ring-ink-100 placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"

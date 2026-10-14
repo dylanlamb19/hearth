@@ -8,6 +8,7 @@ import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
 import { useAuth } from "./AuthProvider";
+import { relTime } from "@/lib/format";
 
 function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
@@ -70,7 +71,7 @@ export function PostCard({ post }: { post: Post }) {
           <div>
             <p className="font-medium text-ink-900">{author.name}</p>
             <p className="flex items-center gap-1 text-xs text-ink-400">
-              {post.createdAt}
+              {relTime(post.createdAt)}
               <span aria-hidden>·</span>
               {post.privacy === "public" ? <Globe2 className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
             </p>
@@ -100,20 +101,21 @@ export function PostCard({ post }: { post: Post }) {
           onClick={() => setReactionsOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
         >
-          <Heart className="h-4 w-4" /> Love · {loveCount}
+          <Heart className="h-4 w-4" /> <span className="hidden sm:inline">Love ·</span> {loveCount}
         </button>
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <MessageCircle className="h-4 w-4" /> Comment · {post.comments}
+        <button type="button" aria-label="Comment" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
+          <MessageCircle className="h-4 w-4" /> <span className="hidden sm:inline">Comment ·</span> {post.comments}
         </button>
         <button
           type="button"
           onClick={handleShareClick}
+          aria-label="Copy link"
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
         >
-          <Share2 className="h-4 w-4" /> Share
+          <Share2 className="h-4 w-4" /> <span className="hidden sm:inline">Copy link</span>
         </button>
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <Bookmark className="h-4 w-4" /> Save
+        <button type="button" aria-label="Save" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
+          <Bookmark className="h-4 w-4" /> <span className="hidden sm:inline">Save</span>
         </button>
       </div>
 
