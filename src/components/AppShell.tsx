@@ -12,6 +12,7 @@ import { Avatar } from "./Avatar";
 import { useAuth } from "./AuthProvider";
 import { NotificationPermissionHost } from "./NotificationPermissionHost";
 import { needsOnboarding } from "@/lib/auth";
+import { useUnreadCount } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -36,6 +37,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const unreadCount = useUnreadCount();
+  const [phoneSearchOpen, setPhoneSearchOpen] = useState(false);
 
   useEffect(() => {
     if (ready && !user) router.replace("/login");
@@ -49,8 +52,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setOpen(false);
+    setPhoneSearchOpen(false);
   }, [pathname]);
 
+  function runSearch(raw: string) {
+    const value = raw.trim();
+    router.push(value ? `/people?q=${encodeURIComponent(value)}` : "/people");
+  }
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -71,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const NavLinks = (
     <nav className="flex flex-col gap-1 p-3">
       <div className="mb-3 flex items-center gap-3 rounded-2xl bg-cream-100 px-3 py-3">
-        <Avatar name={user.name} />
+        <Avatar name={user.name} photoUrl={user.photoUrl} />
         <div className="min-w-0">
           <p className="truncate font-medium text-ink-900">{user.name}</p>
           <p className="truncate text-xs text-ink-400">@{user.handle}</p>
@@ -91,6 +99,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Icon className="h-5 w-5" />
             {item.label}
+            {item.href === "/notifications" && unreadCount > 0 && (
+              <span className="ml-auto rounded-full bg-ember-100 px-2 py-0.5 text-[11px] font-medium text-ember-700">
+                {unreadCount}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -129,31 +142,67 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  const value = (e.target as HTMLInputElement).value.trim();
-                  router.push(
-                    value
-                      ? `/people?q=${encodeURIComponent(value)}`
-                      : "/people",
-                  );
+                  runSearch((e.target as HTMLInputElement).value);
                 }
               }}
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-full p-2 text-ink-600 hover:bg-cream-200 md:hidden"
+              aria-label={phoneSearchOpen ? "Close search" : "Search Hearth"}
+              aria-expanded={phoneSearchOpen}
+              onClick={() => setPhoneSearchOpen((v) => !v)}
+            >
+              {phoneSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+            </button>
             <Link href="/messages" className="rounded-full p-2 text-ink-600 hover:bg-cream-200" aria-label="Messages">
               <MessageCircle className="h-5 w-5" />
             </Link>
-            <Link href="/notifications" className="rounded-full p-2 text-ink-600 hover:bg-cream-200" aria-label="Notifications">
+            <Link
+              href="/notifications"
+              className="relative rounded-full p-2 text-ink-600 hover:bg-cream-200"
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+            >
               <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember-100 px-1 text-[10px] font-semibold leading-none text-ember-700 ring-1 ring-cream-100">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
             <Link href="/profile" className="rounded-full p-1 hover:bg-cream-200" aria-label="Profile">
-              <Avatar name={user.name} size="sm" />
+              <Avatar name={user.name} size="sm" photoUrl={user.photoUrl} />
             </Link>
             <Link href="/settings" className="hidden rounded-full p-2 text-ink-600 hover:bg-cream-200 sm:inline-flex" aria-label="Settings">
               <Settings className="h-5 w-5" />
             </Link>
           </div>
         </div>
+        {phoneSearchOpen && (
+          <form
+            role="search"
+            className="px-4 pb-3 md:hidden"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = e.currentTarget.elements.namedItem("q") as HTMLInputElement | null;
+              runSearch(input?.value ?? "");
+            }}
+          >
+            <label htmlFor="phone-search" className="sr-only">
+              Search Hearth
+            </label>
+            <input
+              id="phone-search"
+              name="q"
+              type="search"
+              autoFocus
+              placeholder="Search Hearth"
+              className="w-full rounded-full border-0 bg-white px-4 py-2.5 text-sm shadow-soft ring-1 ring-ink-100 placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
+            />
+          </form>
+        )}
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[240px_minmax(0,1fr)]">

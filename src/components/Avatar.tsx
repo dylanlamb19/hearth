@@ -13,8 +13,11 @@ export function Avatar({
   size = "md",
   online,
   className,
+  photoUrl,
 }: {
   name: string;
+  /** Saved profile photo; falls back to initials when missing or broken. */
+  photoUrl?: string;
   size?: "sm" | "md" | "lg" | "xl";
   online?: boolean;
   className?: string;
@@ -23,9 +26,21 @@ export function Avatar({
   const color = palette[name.length % palette.length];
   return (
     <div className={cn("relative inline-flex shrink-0", className)}>
-      <div className={cn("flex items-center justify-center rounded-full font-medium", sizes[size], color)}>
-        {initials(name)}
-      </div>
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- user-provided URL, any host
+        <img
+          src={photoUrl}
+          alt=""
+          className={cn("rounded-full object-cover", sizes[size])}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      ) : (
+        <div className={cn("flex items-center justify-center rounded-full font-medium", sizes[size], color)}>
+          {initials(name)}
+        </div>
+      )}
       {online && (
         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-cream-100 bg-emerald-500" />
       )}
