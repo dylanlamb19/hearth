@@ -1,16 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
+import { inviteFromSearch, PENDING_INVITE_KEY } from "@/lib/invite";
 
 export default function SignupPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
+  const [invite, setInvite] = useState<string | null>(null);
+
+  useEffect(() => {
+    const code = inviteFromSearch(window.location.search);
+    if (!code) return;
+    setInvite(code);
+    try {
+      localStorage.setItem(PENDING_INVITE_KEY, code);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -52,6 +65,11 @@ export default function SignupPage() {
           <div className="mb-8 lg:hidden"><Logo /></div>
           <h1 className="font-display text-4xl text-ink-900">Join Hearth</h1>
           <p className="mt-2 text-ink-600">A quieter social network. No ads, no shouting.</p>
+          {invite && (
+            <p className="mt-3 inline-flex rounded-full bg-cream-50 px-3 py-1 text-xs text-ink-500 ring-1 ring-ink-100">
+              Coming in with invite <span className="ml-1 font-mono text-ink-700">{invite}</span>
+            </p>
+          )}
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <Button
               type="button"
@@ -128,7 +146,7 @@ export default function SignupPage() {
             <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-700">Privacy</Link>
           </p>
           <p className="mt-6 text-sm text-ink-500">
-            Already here? <Link href="/login" className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>
+            Already here? <Link href={invite ? `/login?invite=${encodeURIComponent(invite)}` : "/login"} className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>
           </p>
         </div>
       </div>

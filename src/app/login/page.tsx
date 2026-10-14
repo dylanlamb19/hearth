@@ -1,17 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
 import { needsOnboarding } from "@/lib/auth";
+import { inviteFromSearch } from "@/lib/invite";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
+  const [invite, setInvite] = useState<string | null>(null);
+
+  useEffect(() => {
+    setInvite(inviteFromSearch(window.location.search));
+  }, []);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -66,7 +72,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full">Sign in</Button>
           </form>
           <p className="mt-6 text-sm text-ink-500">
-            New here? <Link href="/signup" className="font-medium text-ink-800 underline-offset-2 hover:underline">Create an account</Link>
+            New here? <Link href={invite ? `/signup?invite=${encodeURIComponent(invite)}` : "/signup"} className="font-medium text-ink-800 underline-offset-2 hover:underline">Create an account</Link>
           </p>
           <p className="mt-4 text-xs text-ink-400">Demo: ember@hearth.demo / hearth123</p>
         </div>

@@ -76,3 +76,31 @@ export function buildInviteUrl(code: string): string {
   if (typeof window === "undefined") return `/invite/${code}`;
   return `${window.location.origin}/invite/${code}`;
 }
+
+export type InviteLookup = { valid: boolean; inviterName: string | null };
+
+/**
+ * Check an invite code by shape: `<handle>-<suffix>` where handle is a known member.
+ * Codes are minted on the inviter's device, so the person opening the link can't
+ * look them up locally — we trust the handle prefix and name the inviter from it.
+ * TODO(#22): replace with a real `invites` table lookup in Supabase.
+ */
+export function lookupInviteCode(
+  rawCode: string,
+  members: { id: string; name: string; handle: string }[],
+): InviteLookup {
+  const code = (rawCode || "").trim().toLowerCase();
+  const match = /^([a-z0-9]{1,12})-([a-z0-9]{2,8})$/.exec(code);
+  if (!match) return { valid: false, inviterName: null };
+  const member = members.find((m) => inviteBaseFromSeed(m.handle) === match[1]);
+  return member ? { valid: true, inviterName: member.name } : { valid: false, inviterName: null };
+}
+
+/** Read a pending invite code from the current URL (?invite=...). */
+export function inviteFromSearch(search: string): string | null {
+  const value = new URLSearchParams(search).get("invite");
+  return isValidCode(value) ? value : null;
+}
+
+/** Invite code carried from /invite/[code] through signup (kept on this device). */
+export const PENDING_INVITE_KEY = "hearth_pending_invite";
