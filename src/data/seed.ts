@@ -40,7 +40,10 @@ export type Listing = {
   sellerId: string;
   distance: string;
   postedAt: string;
-  image: string;
+  /** Photo URL. Omit when `illustration` is set. */
+  image?: string;
+  /** Cream line-drawing placeholder instead of a stock photo. */
+  illustration?: "skillet" | "stool" | "monstera";
   description: string;
 };
 
@@ -207,7 +210,7 @@ export const listings: Listing[] = [
     sellerId: "u-jordan",
     distance: "1.2 mi",
     postedAt: "2 days ago",
-    image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80",
+    illustration: "skillet",
     description: "Seasoned and ready. Pickup on the porch preferred.",
   },
   {
@@ -218,7 +221,7 @@ export const listings: Listing[] = [
     sellerId: "u-nova",
     distance: "0.8 mi",
     postedAt: "Yesterday",
-    image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=800&q=80",
+    illustration: "stool",
     description: "Solid cedar. Fits a medium planter perfectly.",
   },
   {
@@ -240,7 +243,7 @@ export const listings: Listing[] = [
     sellerId: "u-maya",
     distance: "0.5 mi",
     postedAt: "Today",
-    image: "https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800&q=80",
+    illustration: "monstera",
     description: "Rooted in water. Happy in bright shade.",
   },
 ];
