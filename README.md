@@ -1,52 +1,42 @@
 # Hearth
 
-A quieter social network for people you already know. Built with Next.js 15, React 19, and Tailwind CSS.
-
-## What it does
-
-- Home feed with posts, reactions, and replies
-- Friends, groups, and events
-- Direct messages
-- Marketplace for local listings
-- Video and clip sharing
-- Notifications, saved posts, and profiles
-- Invite codes for bringing people in
-- Report and block tools for moderation
+A quieter social network for people you already know. Invite-only, no ads, no algorithmic feed — just posts, groups, events, and direct messages with the people you chose to let in.
 
 ## Stack
 
-- Next.js 15 (App Router)
-- React 19
-- TypeScript
-- Tailwind CSS
-- Lucide icons
+- **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend:** Next.js API routes (client-side demo auth for now; real backend is next)
+- **Data:** localStorage-backed seed data for demo purposes
 
-## Run locally
+## Features
+
+- Feed with posts, likes, and comments
+- Friends system with requests and suggestions
+- Groups with membership and group posts
+- Events with RSVPs
+- Marketplace listings
+- Direct messages
+- Moments (stories) and Clips (short video)
+- Invite codes for controlled growth
+- Report and block for moderation
+
+## Getting started
 
 ```
-git clone https://github.com/dylanlamb19/hearth.git
-cd hearth
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. Sign in with any email to explore the demo.
 
-```
-npm run build
-npm start
-```
+## What's next
 
-## Demo login
+- Real backend with a database (Postgres) instead of localStorage
+- Server-side auth (sessions or JWT) instead of client-side demo auth
+- Image and video upload for posts, moments, and clips
+- Push notifications for replies and mentions
+- Search across posts, people, and groups
 
-Sign up with any email, or use the seeded Ember account shown on the login page.
+## Contributing
 
-## Routes
-
-Public: `/`, `/login`, `/signup`, `/forgot-password`, `/about`, `/help`, `/terms`, `/privacy`, `/pricing`
-
-App: `/home`, `/moments`, `/friends`, `/messages`, `/groups`, `/events`, `/marketplace`, `/videos`, `/notifications`, `/saved`, `/profile`
-
-## Status
-
-MVP. Seed data and client-side demo auth for now. Real backend and auth are the next step.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Known gaps are tracked in [ISSUES.md](ISSUES.md).
