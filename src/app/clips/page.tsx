@@ -251,7 +251,10 @@ export default function ClipsPage() {
       </div>
 
       {/* Left-bottom creator + caption */}
-      <div className="absolute bottom-10 left-4 z-30 max-w-[min(70%,18rem)] sm:left-[max(1rem,calc(50%-240px+1rem))]">
+      {/* Soft dark wash behind the caption so it reads over bright frames */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 mx-auto h-48 max-w-[480px] bg-gradient-to-t from-ink-950/75 via-ink-950/35 to-transparent" />
+      {/* Caption sits ~12px above the "1 / N" counter */}
+      <div className="absolute bottom-9 left-4 z-30 max-w-[min(70%,18rem)] sm:left-[max(1rem,calc(50%-240px+1rem))]">
         <Link
           href={author ? `/profile/${author.handle}` : "/profile"}
           className="inline-flex items-center gap-2.5"
@@ -259,6 +262,9 @@ export default function ClipsPage() {
           {author && <Avatar name={author.name} size="sm" className="ring-2 ring-cream-100/40" />}
           <span className="text-sm font-medium text-cream-100 drop-shadow">@{author?.handle ?? "friend"}</span>
         </Link>
+        <span className="ml-2 rounded-full bg-cream-100/20 px-2 py-0.5 align-middle text-[10px] font-medium uppercase tracking-wide text-cream-100/80">
+          Sample
+        </span>
         <p
           className={cn(
             "mt-2 text-sm leading-snug text-cream-100/90",

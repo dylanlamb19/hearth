@@ -130,6 +130,8 @@ export function ReportMenu({
           <label className="mt-4 block text-left text-sm">
             <span className="mb-1.5 block text-ink-500">Optional note</span>
             <textarea
+              id="report-note"
+              name="note"
               value={sheet.note}
               onChange={(e) => setSheet({ ...sheet, note: e.target.value })}
               rows={2}

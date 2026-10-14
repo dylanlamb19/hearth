@@ -6,7 +6,6 @@ import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
-import { ReportMenu } from "@/components/ReportMenu";
 import { PostCard } from "@/components/PostCard";
 import { useAuth } from "@/components/AuthProvider";
 import { posts } from "@/data/seed";
@@ -32,7 +31,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-ink-500">@{user?.handle}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               {isOwnProfile && (
                 <Link
                   href="/home?compose=1"
@@ -42,8 +41,7 @@ export default function ProfilePage() {
                   Share a Moment
                 </Link>
               )}
-              <Button variant="secondary">Edit profile</Button>
-              <ReportMenu subject="your profile tools" />
+              <Button variant="secondary" className="w-full sm:w-auto">Edit profile</Button>
             </div>
           </div>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-600">
@@ -106,7 +104,7 @@ export default function ProfilePage() {
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-ink-800">Report & block</span>
                       <span className="block text-xs text-ink-500">
-                        Calm tools on posts and profiles — no guilt, no red urgency.
+                        Calm tools on Moments and profiles — no guilt, no red urgency.
                       </span>
                     </span>
                   </span>
