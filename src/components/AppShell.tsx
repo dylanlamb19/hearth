@@ -143,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember-500 px-1 text-[10px] font-semibold leading-none text-white">
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember-100 px-1 text-[10px] font-semibold leading-none text-ember-700 ring-1 ring-cream-100">
                   {unreadCount}
                 </span>
               )}

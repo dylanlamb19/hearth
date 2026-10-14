@@ -266,7 +266,7 @@ export const conversations: Conversation[] = [
 ];
 
 export const notifications: Notification[] = [
-  { id: "n1", text: "Maya Chen loved your post", time: "1h ago", unread: true, href: "/profile" },
+  { id: "n1", text: "Maya Chen loved your Moment", time: "1h ago", unread: true, href: "/profile" },
   { id: "n2", text: "Jordan Hale invited you to Porch soup night", time: "3h ago", unread: true, href: "/events" },
   { id: "n3", text: "Sam Rivera accepted your friend request", time: "Yesterday", unread: false, href: "/profile/sam" },
   { id: "n4", text: "Nova Park commented on your Moment", time: "2 days ago", unread: false, href: "/profile" },

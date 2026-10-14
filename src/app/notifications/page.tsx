@@ -58,7 +58,9 @@ export default function NotificationsPage() {
                     <p className="mt-1 text-xs text-ink-400">{n.time}</p>
                   </div>
                   {unread && (
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-ember-500" aria-label="Unread" />
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-ember-500">
+                      <span className="sr-only">Unread</span>
+                    </span>
                   )}
                 </button>
               </li>

@@ -32,6 +32,20 @@ export function PostCard({ post }: { post: Post }) {
         }
       : null);
 
+  // Soft cream ring when the URL hash points at this post (e.g. from Notifications).
+  const [highlight, setHighlight] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      if (window.location.hash === `#${post.id}`) {
+        setHighlight(true);
+        window.setTimeout(() => setHighlight(false), 1500);
+      }
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, [post.id]);
+
   useEffect(() => {
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -63,7 +77,10 @@ export function PostCard({ post }: { post: Post }) {
   }
 
   return (
-    <article id={post.id} className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card sm:p-5">
+    <article
+      id={post.id}
+      className={`scroll-mt-20 rounded-3xl border border-ink-100 bg-white p-4 shadow-card ring-4 transition-shadow duration-[1500ms] sm:p-5 ${highlight ? "ring-cream-100" : "ring-transparent"}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <Avatar name={author.name} online={author.online} />
