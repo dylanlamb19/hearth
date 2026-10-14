@@ -27,7 +27,6 @@ export function PostCard({ post }: { post: Post }) {
           name: user.name,
           handle: user.handle,
           bio: user.bio || "",
-          mutuals: 0,
           online: true,
         }
       : null);
