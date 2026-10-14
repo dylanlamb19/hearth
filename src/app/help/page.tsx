@@ -12,7 +12,7 @@ export default function HelpPage() {
       </p>
       <p id="report-block">
         <strong className="font-medium text-ink-800">Report or block.</strong>{" "}
-        Open the ··· menu on a post, profile, or marketplace listing. Report opens a calm cream sheet with
+        Open the ··· menu on a Moment, profile, or marketplace listing. Report opens a calm cream sheet with
         reason chips (Spam, Harassment, Hate, Scam / unsafe listing, Other), then a quiet thank-you. Block asks
         a short confirm — you won’t see them in your feed or chat — then saves that boundary on this device.
         No red urgency, no guilt.

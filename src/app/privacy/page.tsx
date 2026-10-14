@@ -16,12 +16,12 @@ export default function PrivacyPage() {
       </p>
       <p>
         <strong className="font-medium text-ink-800">Friends by default.</strong>{" "}
-        New posts default to friends — not the open web. You can still mark something public when you want
+        New Moments default to friends — not the open web. You can still mark something public when you want
         to. Profiles are meant for people you already know.
       </p>
       <p>
         <strong className="font-medium text-ink-800">Report and block.</strong>{" "}
-        From the ··· menu on posts, profiles, and marketplace listings you can report something that feels
+        From the ··· menu on Moments, profiles, and marketplace listings you can report something that feels
         off (reviewed quietly) or block someone so they leave your feed and chat on this device. Soft
         tools, no scare screens.
       </p>

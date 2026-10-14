@@ -16,7 +16,7 @@ export default function PricingPage() {
         <div className="rounded-3xl border border-ember-200 bg-ember-50 p-6 shadow-card">
           <h2 className="font-display text-2xl text-ink-900">Hearth Plus</h2>
           <p className="mt-2 text-3xl font-semibold text-ember-700">$6<span className="text-base font-medium text-ink-500">/mo</span></p>
-          <p className="mt-3 text-sm text-ink-600">Extra storage for saved posts, custom themes, and early access to listening rooms. Coming soon.</p>
+          <p className="mt-3 text-sm text-ink-600">Extra storage for saved Moments, custom themes, and early access to listening rooms. Coming soon.</p>
           <Button href="/signup" className="mt-6" variant="ember">Join the waitlist</Button>
         </div>
       </div>
