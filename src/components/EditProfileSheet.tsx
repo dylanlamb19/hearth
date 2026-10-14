@@ -6,7 +6,7 @@ import { Button } from "./Button";
 import { useAuth } from "./AuthProvider";
 import { ProfileIdentityFields, identityValidation, type IdentityValues } from "./ProfileIdentityFields";
 
-/** Edit profile — the same photo/handle/bio form as welcome, in a cream sheet. */
+/** Edit profile — the same photo/name/handle/bio form as welcome, in a cream sheet. */
 export function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, updateUser } = useAuth();
   const [values, setValues] = useState<IdentityValues>({ name: "", handle: "", photoUrl: "", bio: "" });

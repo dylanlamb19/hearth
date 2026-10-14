@@ -8,7 +8,6 @@ import { Button } from "@/components/Button";
 import { Avatar } from "@/components/Avatar";
 import { ProfileIdentityFields, identityValidation } from "@/components/ProfileIdentityFields";
 import { useAuth } from "@/components/AuthProvider";
-import { people } from "@/data/seed";
 import { followSuggestions } from "@/lib/social";
 import { INTERESTS } from "@/lib/interests";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";

@@ -223,7 +223,7 @@ export const listings: Listing[] = [
     condition: "Good",
     sellerId: "u-jordan",
     distance: "1.2 mi",
-    postedAt: "2 days ago",
+    postedAt: hoursAgo(48),
     illustration: "skillet",
     description: "Seasoned and ready. Pickup on the porch preferred.",
   },
@@ -234,7 +234,7 @@ export const listings: Listing[] = [
     condition: "Like new",
     sellerId: "u-nova",
     distance: "0.8 mi",
-    postedAt: "Yesterday",
+    postedAt: hoursAgo(26),
     illustration: "stool",
     description: "Solid cedar. Fits a medium planter perfectly.",
   },
@@ -245,7 +245,7 @@ export const listings: Listing[] = [
     condition: "Fair",
     sellerId: "u-sam",
     distance: "2.4 mi",
-    postedAt: "4 days ago",
+    postedAt: hoursAgo(96),
     image: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=800&q=80",
     description: "Rides smooth. Needs a new basket if you want one.",
   },
@@ -256,7 +256,7 @@ export const listings: Listing[] = [
     condition: "Like new",
     sellerId: "u-maya",
     distance: "0.5 mi",
-    postedAt: "Today",
+    postedAt: hoursAgo(4),
     illustration: "monstera",
     description: "Rooted in water. Happy in bright shade.",
   },
@@ -281,10 +281,10 @@ export const conversations: Conversation[] = [
 ];
 
 export const notifications: Notification[] = [
-  { id: "n1", text: "Maya Chen loved your Moment", time: "1h ago", unread: true, href: "/profile" },
+  { id: "n1", text: "Maya Chen loved your Moment", time: "1h ago", unread: true, href: "/home#p2" },
   { id: "n2", text: "Jordan Hale invited you to Porch soup night", time: "3h ago", unread: true, href: "/events" },
   { id: "n3", text: "Sam Rivera accepted your friend request", time: "Yesterday", unread: false, href: "/profile/sam" },
-  { id: "n4", text: "Nova Park commented on your Moment", time: "2 days ago", unread: false, href: "/profile" },
+  { id: "n4", text: "Nova Park commented on your Moment", time: "2 days ago", unread: false, href: "/home#p3" },
 ];
 
 export const videos: VideoItem[] = [
