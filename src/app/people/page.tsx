@@ -11,34 +11,49 @@ import { useAuth } from "@/components/AuthProvider";
 import { people } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
 import { cn } from "@/lib/utils";
+import { isFollowing, isFriend, toggleFollowingIds } from "@/lib/social";
 
-const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
+/** Same 10 interests as welcome step 2. */
+const INTERESTS = [
+  "trails",
+  "cooking",
+  "design",
+  "music",
+  "markets",
+  "plants",
+  "reading",
+  "neighbors",
+  "baking",
+  "bikes",
+] as const;
 
 function PeoplePageContent() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [interest, setInterest] = useState<string | null>(null);
-  const [following, setFollowing] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
     setQuery(q);
   }, [searchParams]);
 
+  // Your interests first, then the rest of the welcome list.
   const chips = useMemo(() => {
-    const saved = user?.interests?.filter((c) => c.trim().length > 0) ?? [];
-    if (saved.length > 0) return saved;
-    return [...DEFAULT_INTERESTS];
+    const saved = (user?.interests ?? []).filter((c) => (INTERESTS as readonly string[]).includes(c));
+    return [...saved, ...INTERESTS.filter((c) => !saved.includes(c))];
   }, [user?.interests]);
 
   // Re-read block list each render so unblock in Settings is reflected on return.
   const blockedIds = new Set(getBlockedIds());
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // "@jordan" searches the handle "jordan".
+    const q = query.trim().toLowerCase().replace(/^@+/, "");
     return people
       .filter((p) => p.id !== user?.id)
+      // Without a search, only suggest people you aren't connected to yet.
+      .filter((p) => Boolean(q) || Boolean(interest) || (!isFriend(user, p.id) && !isFollowing(user, p.id)))
       .filter((p) => !blockedIds.has(p.id))
       .filter((p) => {
         if (!q) return true;
@@ -50,11 +65,11 @@ function PeoplePageContent() {
       })
       .filter((p) => {
         if (!interest) return true;
-        return p.bio.toLowerCase().includes(interest.toLowerCase());
+        return (p.interests ?? []).includes(interest);
       });
     // blockedIds rebuilt each render; serialize for stable memo deps
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional re-read via blockedKey
-  }, [query, interest, user?.id, [...blockedIds].sort().join(",")]);
+  }, [query, interest, user, [...blockedIds].sort().join(",")]);
 
   return (
     <AppShell>
@@ -81,6 +96,7 @@ function PeoplePageContent() {
             <button
               key={chip}
               type="button"
+              aria-pressed={active}
               onClick={() => setInterest(active ? null : chip)}
               className={cn(
                 "rounded-full px-3 py-1.5 text-sm capitalize transition",
@@ -100,12 +116,22 @@ function PeoplePageContent() {
           icon={<UserRound className="h-10 w-10" />}
           title="No one matched"
           description="Try another name or interest."
+          {...(interest || query
+            ? {
+                secondaryLabel: "Clear filter",
+                onSecondaryClick: () => {
+                  setInterest(null);
+                  setQuery("");
+                },
+              }
+            : {})}
         />
       ) : (
         <div className="space-y-3">
           <p className="text-xs text-ink-400">People on Hearth</p>
           {results.map((p) => {
-            const isFollowing = !!following[p.id];
+            const friend = isFriend(user, p.id);
+            const followingThem = isFollowing(user, p.id);
             return (
               <div
                 key={p.id}
@@ -116,18 +142,18 @@ function PeoplePageContent() {
                   <p className="truncate font-medium text-ink-900">{p.name}</p>
                   <p className="truncate text-xs text-ink-400">@{p.handle}</p>
                 </div>
-                <Button
-                  variant={isFollowing ? "secondary" : "primary"}
-                  className="!px-4 !py-2 text-xs"
-                  onClick={() =>
-                    setFollowing((prev) => ({
-                      ...prev,
-                      [p.id]: !prev[p.id],
-                    }))
-                  }
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </Button>
+                {friend ? (
+                  <span className="rounded-full bg-cream-100 px-3 py-1.5 text-xs text-ink-600 ring-1 ring-ink-100">Friends</span>
+                ) : (
+                  <Button
+                    variant={followingThem ? "secondary" : "primary"}
+                    className="!px-4 !py-2 text-xs"
+                    aria-pressed={followingThem}
+                    onClick={() => updateUser({ followingIds: toggleFollowingIds(user, p.id) })}
+                  >
+                    {followingThem ? "Following" : "Follow"}
+                  </Button>
+                )}
               </div>
             );
           })}

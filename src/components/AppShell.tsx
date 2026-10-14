@@ -36,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [phoneSearchOpen, setPhoneSearchOpen] = useState(false);
 
   useEffect(() => {
     if (ready && !user) router.replace("/login");
@@ -49,7 +50,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setOpen(false);
+    setPhoneSearchOpen(false);
   }, [pathname]);
+
+  function runSearch(raw: string) {
+    const value = raw.trim();
+    router.push(value ? `/people?q=${encodeURIComponent(value)}` : "/people");
+  }
 
   if (!ready || !user) {
     return (
@@ -115,17 +122,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  const value = (e.target as HTMLInputElement).value.trim();
-                  router.push(
-                    value
-                      ? `/people?q=${encodeURIComponent(value)}`
-                      : "/people",
-                  );
+                  runSearch((e.target as HTMLInputElement).value);
                 }
               }}
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-full p-2 text-ink-600 hover:bg-cream-200 md:hidden"
+              aria-label={phoneSearchOpen ? "Close search" : "Search Hearth"}
+              aria-expanded={phoneSearchOpen}
+              onClick={() => setPhoneSearchOpen((v) => !v)}
+            >
+              {phoneSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+            </button>
             <Link href="/messages" className="rounded-full p-2 text-ink-600 hover:bg-cream-200" aria-label="Messages">
               <MessageCircle className="h-5 w-5" />
             </Link>
@@ -140,6 +151,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </div>
+        {phoneSearchOpen && (
+          <form
+            role="search"
+            className="px-4 pb-3 md:hidden"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = e.currentTarget.elements.namedItem("q") as HTMLInputElement | null;
+              runSearch(input?.value ?? "");
+            }}
+          >
+            <label htmlFor="phone-search" className="sr-only">
+              Search Hearth
+            </label>
+            <input
+              id="phone-search"
+              name="q"
+              type="search"
+              autoFocus
+              placeholder="Search Hearth"
+              className="w-full rounded-full border-0 bg-white px-4 py-2.5 text-sm shadow-soft ring-1 ring-ink-100 placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
+            />
+          </form>
+        )}
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[240px_minmax(0,1fr)]">
