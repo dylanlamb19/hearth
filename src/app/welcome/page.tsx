@@ -29,6 +29,7 @@ export default function WelcomePage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [bio, setBio] = useState("");
+  const [name, setName] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [handle, setHandle] = useState("");
   const [handleReady, setHandleReady] = useState(false);
@@ -97,6 +98,7 @@ export default function WelcomePage() {
   function continueFromIdentity() {
     if (handleInvalid) return;
     updateUser({
+      name: name.trim() || user!.name,
       bio: bio.trim() || undefined,
       photoUrl: photoUrl.trim() || undefined,
       handle: effectiveHandle,
@@ -131,10 +133,10 @@ export default function WelcomePage() {
             <h1 className="font-display text-3xl text-ink-900">Face the room</h1>
             <p className="text-sm text-ink-500">Add a photo, a handle, and a one-line bio so people know who is at the table.</p>
             <ProfileIdentityFields
-              name={user.name}
               selfId={user.id}
-              values={{ handle, photoUrl, bio }}
+              values={{ name: name || user.name, handle, photoUrl, bio }}
               onChange={(next) => {
+                setName(next.name);
                 setHandle(next.handle);
                 setPhotoUrl(next.photoUrl);
                 setBio(next.bio);

@@ -9,11 +9,11 @@ import { ProfileIdentityFields, identityValidation, type IdentityValues } from "
 /** Edit profile — the same photo/handle/bio form as welcome, in a cream sheet. */
 export function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, updateUser } = useAuth();
-  const [values, setValues] = useState<IdentityValues>({ handle: "", photoUrl: "", bio: "" });
+  const [values, setValues] = useState<IdentityValues>({ name: "", handle: "", photoUrl: "", bio: "" });
 
   useEffect(() => {
     if (!open || !user) return;
-    setValues({ handle: user.handle, photoUrl: user.photoUrl ?? "", bio: user.bio ?? "" });
+    setValues({ name: user.name, handle: user.handle, photoUrl: user.photoUrl ?? "", bio: user.bio ?? "" });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -27,6 +27,7 @@ export function EditProfileSheet({ open, onClose }: { open: boolean; onClose: ()
   function save() {
     if (handleInvalid) return;
     updateUser({
+      name: values.name.trim() || user!.name,
       handle: effectiveHandle,
       photoUrl: values.photoUrl.trim() || undefined,
       bio: values.bio.trim() || undefined,
@@ -61,7 +62,6 @@ export function EditProfileSheet({ open, onClose }: { open: boolean; onClose: ()
           </button>
         </div>
         <ProfileIdentityFields
-          name={user.name}
           selfId={user.id}
           values={values}
           onChange={setValues}

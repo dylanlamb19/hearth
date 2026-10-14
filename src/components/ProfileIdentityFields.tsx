@@ -13,7 +13,7 @@ export function isHandleTaken(handle: string, selfId?: string) {
   return true;
 }
 
-export type IdentityValues = { handle: string; photoUrl: string; bio: string };
+export type IdentityValues = { name: string; handle: string; photoUrl: string; bio: string };
 
 export function identityValidation(handle: string, selfId?: string) {
   const effectiveHandle = normalizeHandle(handle);
@@ -22,27 +22,40 @@ export function identityValidation(handle: string, selfId?: string) {
   return { effectiveHandle, handleTaken, handleInvalid };
 }
 
-/** Photo, handle, and bio fields — shared by welcome step 1 and Edit profile. */
+/** Name, photo, handle, and bio fields — shared by welcome step 1 and Edit profile. */
 export function ProfileIdentityFields({
-  name,
   selfId,
   values,
   onChange,
   idPrefix = "identity",
 }: {
-  name: string;
   selfId?: string;
   values: IdentityValues;
   onChange: (next: IdentityValues) => void;
   idPrefix?: string;
 }) {
   const { effectiveHandle, handleTaken, handleInvalid } = identityValidation(values.handle, selfId);
+  const name = values.name.trim() || "You";
+  const photo = /^https?:\/\//.test(values.photoUrl.trim()) ? values.photoUrl.trim() : undefined;
 
   return (
     <div className="space-y-4">
       <div className="mx-auto flex justify-center">
-        <Avatar name={name} size="xl" />
+        <Avatar name={name} size="xl" photoUrl={photo} />
       </div>
+      <label className="block text-left text-sm" htmlFor={`${idPrefix}-name`}>
+        <span className="mb-1.5 block text-ink-600">Name</span>
+        <input
+          id={`${idPrefix}-name`}
+          name="name"
+          value={values.name}
+          onChange={(e) => onChange({ ...values, name: e.target.value })}
+          placeholder="What friends call you"
+          autoComplete="name"
+          maxLength={60}
+          className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-sm focus:border-ember-400 focus:ring-ember-300"
+        />
+      </label>
       <label className="block text-left text-sm" htmlFor={`${idPrefix}-handle`}>
         <span className="mb-1.5 block text-ink-600">Handle</span>
         <div className="relative">
