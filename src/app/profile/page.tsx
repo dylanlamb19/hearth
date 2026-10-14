@@ -6,13 +6,15 @@ import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
-import { ReportMenu } from "@/components/ReportMenu";
 import { PostCard } from "@/components/PostCard";
 import { useAuth } from "@/components/AuthProvider";
+import { EditProfileSheet } from "@/components/EditProfileSheet";
+import { useState } from "react";
 import { posts } from "@/data/seed";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const [editOpen, setEditOpen] = useState(false);
   const mine = posts.filter((p) => p.authorId === user?.id);
   // This route is the signed-in user's own profile.
   const isOwnProfile = Boolean(user);
@@ -42,12 +44,13 @@ export default function ProfilePage() {
                   Share a Moment
                 </Link>
               )}
-              <Button variant="secondary">Edit profile</Button>
-              <ReportMenu subject="your profile tools" />
+              <Button variant="secondary" onClick={() => setEditOpen(true)}>
+                Edit profile
+              </Button>
             </div>
           </div>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-600">
-            Keeping the lights low and the kettle on. Friends-only by default. You decide who sits at this table.
+            {user?.bio || "Keeping the lights low and the kettle on. Friends-only by default. You decide who sits at this table."}
           </p>
           <div className="mt-4 rounded-2xl bg-cream-100 px-4 py-3 text-xs text-ink-600">
             Privacy: your profile is visible to friends. Use report and block anytime. Read more in our{" "}
@@ -132,6 +135,7 @@ export default function ProfilePage() {
           mine.map((post) => <PostCard key={post.id} post={post} />)
         )}
       </div>
+      <EditProfileSheet open={editOpen} onClose={() => setEditOpen(false)} />
     </AppShell>
   );
 }
