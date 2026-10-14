@@ -28,7 +28,7 @@ export default function ProfilePage() {
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
               <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={user?.name || "You"} size="xl" />
+                <Avatar name={user?.name || "You"} size="xl" photoUrl={user?.photoUrl} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>

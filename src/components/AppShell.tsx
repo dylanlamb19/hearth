@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const NavLinks = (
     <nav className="flex flex-col gap-1 p-3">
       <div className="mb-3 flex items-center gap-3 rounded-2xl bg-cream-100 px-3 py-3">
-        <Avatar name={user.name} />
+        <Avatar name={user.name} photoUrl={user.photoUrl} />
         <div className="min-w-0">
           <p className="truncate font-medium text-ink-900">{user.name}</p>
           <p className="truncate text-xs text-ink-400">@{user.handle}</p>
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Bell className="h-5 w-5" />
             </Link>
             <Link href="/profile" className="rounded-full p-1 hover:bg-cream-200" aria-label="Profile">
-              <Avatar name={user.name} size="sm" />
+              <Avatar name={user.name} size="sm" photoUrl={user.photoUrl} />
             </Link>
             <Link href="/settings" className="hidden rounded-full p-2 text-ink-600 hover:bg-cream-200 sm:inline-flex" aria-label="Settings">
               <Settings className="h-5 w-5" />

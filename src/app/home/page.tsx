@@ -65,8 +65,10 @@ export default function HomePage() {
   const suggestions = people
     .filter(
       (p) =>
-        followSuggestions(user, blockedIds).some((s) => s.id === p.id) ||
-        (followedHere.includes(p.id) && !blockedIds.has(p.id)),
+        p.id !== user?.id &&
+        p.id !== "u-ember" &&
+        (followSuggestions(user, blockedIds).some((s) => s.id === p.id) ||
+          (followedHere.includes(p.id) && !blockedIds.has(p.id))),
     )
     .slice(0, 3);
   const contacts = people.filter(
@@ -155,7 +157,7 @@ export default function HomePage() {
 
           <section className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card">
             <div className="flex items-center gap-3">
-              <Avatar name={user?.name || "You"} />
+              <Avatar name={user?.name || "You"} photoUrl={user?.photoUrl} />
               <input
                 ref={composerRef}
                 value={draft}
