@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { markFindPeoplePending } from "@/lib/notificationPermission";
@@ -27,17 +27,17 @@ const items = [
 
 export function OnboardingChecklist() {
   const { user } = useAuth();
-  // null = not read yet; reserve the card's space so the feed doesn't jump.
-  const [visible, setVisible] = useState<boolean | null>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
-
-  useEffect(() => {
+  // Read the dismissed state on first render (AppShell only mounts this on the client),
+  // so no space is reserved once Settle in has been dismissed. null = storage not available yet.
+  const [visible, setVisible] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") return null;
     try {
-      setVisible(localStorage.getItem(STORAGE_KEY) === "1");
+      return localStorage.getItem(STORAGE_KEY) === "1";
     } catch {
-      setVisible(false);
+      return false;
     }
-  }, []);
+  });
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   function dismiss() {
     try {

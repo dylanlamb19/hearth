@@ -1,24 +1,33 @@
 import Image from "next/image";
-import { ShieldCheck } from "lucide-react";
 import { Listing, personById } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
+import { ListingIllustration } from "./ListingIllustration";
 import { ReportMenu } from "./ReportMenu";
 import { relTime } from "@/lib/format";
+
+export function messageSellerHref(listing: Listing): string {
+  const q = new URLSearchParams({ with: listing.sellerId, about: listing.title });
+  return `/messages?${q.toString()}`;
+}
 
 export function MarketplaceCard({ listing }: { listing: Listing }) {
   const seller = personById(listing.sellerId);
   return (
     <article className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card">
       <div className="relative aspect-[4/3] bg-cream-200">
-        <Image
-          src={listing.image}
-          alt={listing.title}
-          fill
-          className="object-cover"
-          sizes="(max-width:768px) 100vw, 33vw"
-          unoptimized
-        />
+        {listing.illustration ? (
+          <ListingIllustration kind={listing.illustration} label={listing.title} />
+        ) : listing.image ? (
+          <Image
+            src={listing.image}
+            alt={listing.title}
+            fill
+            className="object-cover"
+            sizes="(max-width:768px) 100vw, 33vw"
+            unoptimized
+          />
+        ) : null}
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
@@ -46,13 +55,9 @@ export function MarketplaceCard({ listing }: { listing: Listing }) {
           </div>
         )}
         <div className="mt-4">
-          <Button variant="secondary" href="/messages" className="w-full">
+          <Button variant="secondary" href={messageSellerHref(listing)} className="w-full">
             Message
           </Button>
-        </div>
-        <div className="mt-3 flex items-start gap-2 rounded-2xl bg-cream-100 px-3 py-2.5 text-xs text-ink-600">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ember-500" aria-hidden />
-          <p>Meet in public if you can — trust your gut.</p>
         </div>
       </div>
     </article>
