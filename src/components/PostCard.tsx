@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Heart, MessageCircle, Share2, Bookmark, Globe2, Users } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Globe2, Users, MoreHorizontal } from "lucide-react";
 import { Post, personById, reactionsForPost } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
@@ -13,10 +13,23 @@ function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
 }
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({
+  post,
+  onEdit,
+  onDelete,
+}: {
+  post: Post;
+  /** Shown in your own Moment's menu when provided. */
+  onEdit?: (id: string, body: string) => void;
+  onDelete?: (id: string) => void;
+}) {
   const { user } = useAuth();
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState(post.body);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seedAuthor = personById(post.authorId);
   const author =
@@ -30,7 +43,10 @@ export function PostCard({ post }: { post: Post }) {
           mutuals: 0,
           online: true,
         }
-      : null);
+      : post.authorName
+        ? { id: post.authorId, name: post.authorName, handle: post.authorHandle || "", bio: "", mutuals: 0, online: false }
+        : null);
+  const isOwn = Boolean(user && post.authorId === user.id);
 
   useEffect(() => {
     return () => {
@@ -76,7 +92,50 @@ export function PostCard({ post }: { post: Post }) {
             </p>
           </div>
         </div>
-        <ReportMenu subject={author.name} subjectId={author.id} />
+        {isOwn && (onEdit || onDelete) ? (
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Moment options"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
+              className="rounded-full p-2 text-ink-400 hover:bg-cream-100 hover:text-ink-700"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-2xl border border-ink-100 bg-white py-1 text-sm shadow-soft">
+                {onEdit && (
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-ink-700 hover:bg-cream-50"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setEditDraft(post.body);
+                      setEditing(true);
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-ink-700 hover:bg-cream-50"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setConfirmDelete(true);
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <ReportMenu subject={author.name} subjectId={author.id} />
+        )}
       </div>
 
       {post.image && (
@@ -91,7 +150,57 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       )}
 
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-800">{post.body}</p>
+      {editing ? (
+        <form
+          className="mt-4 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const body = editDraft.trim();
+            if (!body) return;
+            onEdit?.(post.id, body);
+            setEditing(false);
+          }}
+        >
+          <textarea
+            aria-label="Edit Moment"
+            value={editDraft}
+            onChange={(e) => setEditDraft(e.target.value)}
+            rows={3}
+            className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-[15px] focus:border-ember-400 focus:ring-ember-300"
+          />
+          <div className="flex justify-end gap-2 text-sm">
+            <button type="button" onClick={() => setEditing(false)} className="rounded-full px-3 py-1.5 text-ink-500 hover:bg-cream-100">
+              Cancel
+            </button>
+            <button type="submit" className="rounded-full bg-hearth px-4 py-1.5 font-medium text-white">
+              Save
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="mt-4 text-[15px] leading-relaxed text-ink-800">{post.body}</p>
+      )}
+
+      {confirmDelete && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cream-100 px-4 py-3 text-sm text-ink-700">
+          <span>Delete this Moment? It’ll be gone for everyone.</span>
+          <span className="flex gap-2">
+            <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-full px-3 py-1.5 hover:bg-cream-200">
+              Keep
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDelete(false);
+                onDelete?.(post.id);
+              }}
+              className="rounded-full px-3 py-1.5 text-ink-500 hover:bg-cream-200 hover:text-ink-800"
+            >
+              Delete
+            </button>
+          </span>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-1 text-sm text-ink-500">
         <button
