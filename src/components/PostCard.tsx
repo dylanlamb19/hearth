@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { MessageCircle, Share2, Bookmark, Globe2, Users, MoreHorizontal } from "lucide-react";
+import { MessageCircle, Share2, Bookmark, DoorOpen, Users, MoreHorizontal } from "lucide-react";
 import { Post, personById, reactionsForPost } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
@@ -144,7 +144,15 @@ export function PostCard({
             <p className="flex items-center gap-1 text-xs text-ink-400">
               {post.createdAt}
               <span aria-hidden>·</span>
-              {post.privacy === "public" ? <Globe2 className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+              {post.privacy === "everyone" ? (
+                <span title="Everyone" className="inline-flex">
+                  <DoorOpen className="h-3.5 w-3.5" aria-label="Everyone" />
+                </span>
+              ) : (
+                <span title="Friends" className="inline-flex">
+                  <Users className="h-3.5 w-3.5" aria-label="Friends" />
+                </span>
+              )}
             </p>
           </div>
         </div>
