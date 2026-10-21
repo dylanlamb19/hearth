@@ -9,9 +9,9 @@ export const IMAGE_MAX_SIDE = 1600;
 export const IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 /** Max original photo we'll try to resize in the browser. */
 export const IMAGE_SOURCE_MAX_BYTES = 25 * 1024 * 1024;
-/** Video cap (also the bucket's file_size_limit). */
+/** Video cap for the demo's local preview. Real-account video uploads are off for now. */
 export const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
-export const IMAGE_SOURCE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif"];
+export const IMAGE_SOURCE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 export const VIDEO_TYPES: Record<string, string> = {
   "video/mp4": "mp4",
   "video/webm": "webm",

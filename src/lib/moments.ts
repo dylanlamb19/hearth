@@ -3,7 +3,7 @@
 import type { Post } from "@/data/seed";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/format";
-import { removeMedia, signMediaPaths, type UploadedMedia } from "@/lib/media";
+import { signMediaPaths, type UploadedMedia } from "@/lib/media";
 
 /**
  * Moments data layer. With Supabase configured, Moments live in the `moments` table
@@ -89,7 +89,6 @@ export async function createMoment(input: NewMoment): Promise<Post> {
         body: input.body,
         visibility: input.visibility,
         media_path: input.media?.path ?? null,
-        media_type: input.media?.type ?? null,
       })
       .select(SELECT)
       .single();
@@ -119,12 +118,15 @@ export async function updateMoment(id: string, body: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Soft delete through the delete_moment RPC (sets deleted_at once; RLS then hides the row from everyone). */
+/** Soft delete via /api/moments/delete (delete_moment RPC + file removal; RLS then hides the row from everyone). */
 export async function deleteMoment(id: string): Promise<void> {
   const sb = getSupabaseBrowserClient();
   if (!sb || !isStored(id)) return;
-  const { data: mediaPath, error } = await sb.rpc("delete_moment", { moment_id: id });
-  if (error) throw new Error(error.message);
-  // The Moment is gone; remove its file too (Storage already refuses to sign it).
-  await removeMedia(typeof mediaPath === "string" ? mediaPath : null).catch(() => undefined);
+  // The server route deletes as you (delete_moment) and then removes the file with the admin client.
+  const res = await fetch("/api/moments/delete", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) throw new Error("Couldn’t delete that Moment.");
 }

@@ -61,18 +61,8 @@ export async function uploadMedia(file: File): Promise<UploadedMedia | null> {
     return { path: json.path, type: "image" };
   }
 
-  const res = await fetch("/api/media", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ kind: "video", type: file.type, size: file.size }),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || "Couldn’t upload that video.");
-  const { error } = await sb.storage.from(MEDIA_BUCKET).uploadToSignedUrl(json.path, json.token, file, {
-    contentType: file.type,
-  });
-  if (error) throw new Error("Couldn’t upload that video. Try again?");
-  return { path: json.path, type: "video" };
+  // Video is demo-only for now (metadata can't be stripped server-side yet).
+  throw new Error("Video uploads are coming soon. Photos work today.");
 }
 
 /** Short-lived read URLs. Storage refuses to sign media of deleted or hidden Moments. */
@@ -83,11 +73,4 @@ export async function signMediaPaths(paths: string[]): Promise<Record<string, st
   const out: Record<string, string> = {};
   for (const item of data ?? []) if (item.path && item.signedUrl) out[item.path] = item.signedUrl;
   return out;
-}
-
-/** Best-effort removal of a deleted Moment's object (owner-only delete policy). */
-export async function removeMedia(path: string | null | undefined): Promise<void> {
-  const sb = getSupabaseBrowserClient();
-  if (!sb || !path) return;
-  await sb.storage.from(MEDIA_BUCKET).remove([path]);
 }
