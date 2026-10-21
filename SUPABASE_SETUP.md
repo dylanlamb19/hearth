@@ -1,6 +1,6 @@
 # Turning on real accounts (Supabase, free tier)
 
-Until these steps are done, Hearth keeps using the demo cookie login, so the live site keeps working as it does today.
+Until these steps are done, Hearth runs in demo mode: only `ember@hearth.demo` can sign in (any password, unless `NEXT_PUBLIC_DEMO_PASSWORD` is set), and new signups are closed. Once the keys are set, demo mode and its cookie are switched off entirely: every account is a real Supabase account.
 
 ## 1. Create a free Supabase project
 1. Go to https://supabase.com and sign in (GitHub sign-in is fine).
@@ -9,13 +9,14 @@ Until these steps are done, Hearth keeps using the demo cookie login, so the liv
 
 ## 2. Run the migration
 1. In the project, open **SQL Editor** → **New query**.
-2. Paste in everything from `supabase/migrations/0001_profiles.sql` and click **Run**.
+2. Paste in everything from `supabase/migrations/0001_profiles.sql` and click **Run**. Its column grants keep `birth_year` and `terms_accepted_at` private: the app can't read them through the API.
 3. You should see "Success. No rows returned." This creates the `profiles` table, its privacy rules, and the trigger that adds a profile for each new signup.
 4. Open another **New query**, paste everything from `supabase/migrations/0002_age_gate.sql`, and click **Run**. This adds `birth_year` to profiles and refuses any signup from someone under 13 (the server-side half of the signup age gate).
 
 ## 3. Auth settings
 1. **Authentication → URL Configuration**: set **Site URL** to `https://hearthsocial.grok.me`. Under **Redirect URLs**, add `https://hearthsocial.grok.me/**` and `http://localhost:3000/**`.
-2. **Authentication → Providers → Email**: leave it on. "Confirm email" is optional. With it on, new people get a confirmation link before they can sign in. With it off, they go straight to `/welcome`.
+2. Under **Redirect URLs** the app uses `/auth/callback` for confirmation and password-reset links (covered by the `/**` entries above).
+3. **Authentication → Providers → Email**: leave it on. "Confirm email" is optional. With it on, new people get a confirmation link before they can sign in. With it off, they go straight to `/welcome`.
 
 ## 4. Add the two keys to Vercel
 1. In Supabase, open **Project Settings → API** (or **Connect**) and copy the **Project URL** and the **anon / publishable** key. Never use the `service_role` key here.
@@ -27,6 +28,12 @@ Until these steps are done, Hearth keeps using the demo cookie login, so the liv
 ## 5. Check it
 - Sign up with a new email at `/signup`, finish `/welcome`, refresh, then sign in on another device. You should still be there.
 - Try signing up with a birth year of this year minus 13 or later: you should see the calm "Hearth is for people 13 and older." screen, and no user appears under **Authentication → Users**.
-- `ember@hearth.demo` / `hearth123` still works as a shared, read-only demo. Its changes stay on that device only.
+- Use **Forgot password** on `/login`: the email link should open `/reset-password`, and saving signs you in.
+- The demo account no longer works once keys are set; that's expected.
 
-Local dev: put the same two lines in `.env.local`.
+## Good to know: the age trigger
+`0002_age_gate.sql` refuses **every** new auth user without a `birth_year` of 13+ in their metadata. That includes users you add from the Supabase dashboard and any future OAuth (Google/X) signups. To add someone by hand, set user metadata `{"birth_year": 1990, "terms_accepted": true}`. OAuth will need its own birth-year step before it's turned on.
+
+Supabase usually reports trigger failures as a generic "Database error saving new user". The app shows that as a normal error, not the under-13 screen; the client-side age check is what shows the block screen.
+
+Local dev: copy `.env.example` to `.env.local` and fill in the two keys.
