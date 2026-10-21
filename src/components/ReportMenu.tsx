@@ -5,6 +5,7 @@ import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
 import { Button } from "./Button";
 import { addBlockedId } from "@/lib/blocked";
 import { addReportedId } from "@/lib/reported";
+import { fileReport } from "@/lib/reports";
 
 const REPORT_REASONS = [
   "Nudity or sexual content",
@@ -61,16 +62,8 @@ export function ReportMenu({
 
   function confirmReport() {
     if (sheet?.kind !== "report" || !sheet.reason) return;
-    try {
-      console.info("[hearth report]", {
-        subject,
-        subjectId,
-        reason: sheet.reason,
-        note: sheet.note.trim() || undefined,
-      });
-    } catch {
-      /* ignore */
-    }
+    // Saved to Supabase when configured (insert-only); always hidden locally right away.
+    void fileReport({ momentId: itemId, reason: sheet.reason, note: sheet.note.trim() || undefined });
     if (itemId) {
       addReportedId(itemId);
       onReported?.(itemId);

@@ -12,7 +12,7 @@ Until these steps are done, Hearth runs in demo mode: only `ember@hearth.demo` c
 2. Paste in everything from `supabase/migrations/0001_profiles.sql` and click **Run**. Its column grants keep `birth_year` and `terms_accepted_at` private: the app can't read them through the API.
 3. You should see "Success. No rows returned." This creates the `profiles` table, its privacy rules, and the trigger that adds a profile for each new signup.
 4. Open another **New query**, paste everything from `supabase/migrations/0002_age_gate.sql`, and click **Run**. This adds `birth_year` to profiles and refuses any signup from someone under 13 (the server-side half of the signup age gate).
-5. Run `supabase/migrations/0003_moments.sql` (Moments), then `0004_media.sql`. The second creates the private `moment-media` bucket (50 MB cap, JPEG/MP4/WebM/MOV only) and its policies.
+5. Run `supabase/migrations/0003_moments.sql` (Moments), then `0004_media.sql`. The second creates the private `moment-media` bucket (photos only: JPEG, 4 MB cap) and its policies. Video uploads are off for real accounts for now (the composer shows "Video · Coming soon"), because video metadata such as location can't be stripped server-side on the free tier yet. It also adds the `reports` table: people can file reports but nobody can read them through the app. Each person can report a Moment once; when 3 or more different people report it, it's hidden for everyone except its author until reviewed. Open reports are listed at `/admin/reports` (see step 4) with "Someone under 13" (`needs_account_review`) first; resolve one by setting its `status` to `resolved` in **Table Editor → reports**, and set the Moment's `hidden_pending_review` back to false if it's fine.
 
 ## 3. Auth settings
 1. **Authentication → URL Configuration**: set **Site URL** to `https://hearthsocial.grok.me`. Under **Redirect URLs**, add `https://hearthsocial.grok.me/**` and `http://localhost:3000/**`.
@@ -24,7 +24,8 @@ Until these steps are done, Hearth runs in demo mode: only `ember@hearth.demo` c
 2. In Vercel, open the hearth project → **Settings → Environment Variables** and add both for Production, Preview and Development:
    - `NEXT_PUBLIC_SUPABASE_URL` = the Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = the anon key
-3. For photo and video uploads, also add `SUPABASE_SERVICE_ROLE_KEY` (the **service_role** key) — **without** the `NEXT_PUBLIC_` prefix, so it stays on the server. It's used only by `/api/media` to write to the private bucket. Never put it in a `NEXT_PUBLIC_` variable.
+3. For photo and video uploads, also add `SUPABASE_SERVICE_ROLE_KEY` (the **service_role** key) — **without** the `NEXT_PUBLIC_` prefix, so it stays on the server. It's used only on the server: `/api/media` writes photos to the private bucket, and `/api/moments/delete` removes a deleted Moment's photo. Never put it in a `NEXT_PUBLIC_` variable.
+   Also add `ADMIN_USER_IDS` (server-only): your Supabase user id from **Authentication → Users**, comma-separated for more admins. Only these accounts can open `/admin/reports`; everyone else gets a 404.
 4. **Redeploy** the latest Production deployment. These keys are read at build time, so a redeploy is required.
 
 ## 5. Check it
