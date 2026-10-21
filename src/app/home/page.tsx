@@ -11,6 +11,7 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
+import { createMoment, deleteMoment, listMoments, updateMoment } from "@/lib/moments";
 import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
@@ -58,6 +59,23 @@ export default function HomePage() {
 
   const canShare = draft.trim().length > 0 || attachedImage !== null || videoStub;
 
+  // Stored Moments (Supabase) go on top of the seed feed; demo mode returns none.
+  useEffect(() => {
+    let cancelled = false;
+    listMoments().then(({ moments: stored, hasReal }) => {
+      if (cancelled || stored.length === 0) return;
+      // Once real Moments exist, sample seed posts step aside.
+      setFeed((prev) =>
+        hasReal
+          ? [...stored, ...prev.filter((p) => p.id.startsWith("local-"))]
+          : [...stored, ...prev.filter((p) => !stored.some((s) => s.id === p.id))],
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("compose") !== "1") return;
@@ -100,7 +118,7 @@ export default function HomePage() {
     if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
-  function handleShare() {
+  async function handleShare() {
     if (!canShare || !user) return;
     const body =
       draft.trim() ||
@@ -111,16 +129,15 @@ export default function HomePage() {
           : "");
     if (!body) return;
 
-    const next: Post = {
-      id: `local-${Date.now()}`,
-      authorId: user.id,
-      body,
-      createdAt: "Just now",
-      loves: 0,
-      comments: 0,
-      privacy: audience,
-      ...(attachedImage ? { image: attachedImage } : {}),
-    };
+    let saved: Post;
+    try {
+      saved = await createMoment({ authorId: user.id, body, visibility: audience });
+    } catch {
+      showToast("Couldn’t share that — try again.");
+      return;
+    }
+    // Photos stay on this device for now (no storage bucket yet).
+    const next: Post = attachedImage ? { ...saved, image: attachedImage } : saved;
 
     setFeed((prev) => [next, ...prev]);
     setDraft("");
@@ -283,7 +300,42 @@ export default function HomePage() {
           </div>
 
           {visibleFeed.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard
+              key={post.id}
+              post={post}
+              onEdit={async (id, body) => {
+                const previousBody = feed.find((p) => p.id === id)?.body;
+                setFeed((prev) => prev.map((p) => (p.id === id ? { ...p, body } : p)));
+                try {
+                  await updateMoment(id, body);
+                } catch {
+                  // Revert only this Moment, keeping anything else that changed meanwhile.
+                  if (previousBody !== undefined) {
+                    setFeed((prev) => prev.map((p) => (p.id === id ? { ...p, body: previousBody } : p)));
+                  }
+                  showToast("Couldn’t save that edit — try again.");
+                }
+              }}
+              onDelete={async (id) => {
+                const index = feed.findIndex((p) => p.id === id);
+                const removed = feed[index];
+                setFeed((prev) => prev.filter((p) => p.id !== id));
+                try {
+                  await deleteMoment(id);
+                  showToast("Moment deleted.");
+                } catch {
+                  // Put back only this Moment, near where it was.
+                  if (removed) {
+                    setFeed((prev) =>
+                      prev.some((p) => p.id === id)
+                        ? prev
+                        : [...prev.slice(0, index), removed, ...prev.slice(index)],
+                    );
+                  }
+                  showToast("Couldn’t delete that — try again.");
+                }
+              }}
+            />
           ))}
 
           <div className="h-16" aria-hidden />
