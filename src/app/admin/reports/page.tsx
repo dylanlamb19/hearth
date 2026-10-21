@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/supabase/adminGate";
+import { removeMoment, resolveFlaggedAccount, restoreMoment } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Open reports", robots: { index: false } };
@@ -16,69 +16,118 @@ type ReportRow = {
   moment: { body: string | null; author_id: string | null; hidden_pending_review: boolean | null } | null;
 };
 
-/** Admins only: ADMIN_USER_IDS is a comma-separated list of Supabase user ids (server env). */
-function adminIds(): Set<string> {
-  return new Set(
-    (process.env.ADMIN_USER_IDS || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
-  );
-}
+type FlaggedRow = {
+  user_id: string;
+  reason: string;
+  first_flagged_at: string;
+  profile: { name: string | null; handle: string | null } | null;
+};
+
+const when = (iso: string) => new Date(iso).toLocaleString("en-US");
+const pill = "rounded-full px-3 py-1.5 text-xs font-medium transition";
 
 export default async function AdminReportsPage() {
-  const supabase = await getSupabaseServerClient();
-  const admin = getSupabaseAdminClient();
-  if (!supabase || !admin) notFound();
+  // Not an admin (or no Supabase): plain 404 so the page's existence isn't revealed.
+  const admin = await requireAdmin();
+  if (!admin) notFound();
 
-  const { data: auth } = await supabase.auth.getUser();
-  // Anyone who isn't an admin gets a plain 404, so the page's existence isn't revealed.
-  if (!auth.user || !adminIds().has(auth.user.id)) notFound();
-
-  const { data } = await admin
-    .from("reports")
-    .select(
-      "id, moment_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review)",
-    )
-    .eq("status", "open")
-    .order("needs_account_review", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(200);
-  const reports = (data ?? []) as unknown as ReportRow[];
+  const [{ data: reportData }, { data: flaggedData }] = await Promise.all([
+    admin
+      .from("reports")
+      .select(
+        "id, moment_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review)",
+      )
+      .eq("status", "open")
+      .order("needs_account_review", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(200),
+    admin
+      .from("flagged_accounts")
+      .select("user_id, reason, first_flagged_at, profile:profiles(name, handle)")
+      .eq("status", "open")
+      .order("first_flagged_at", { ascending: true }),
+  ]);
+  const reports = (reportData ?? []) as unknown as ReportRow[];
+  const flagged = (flaggedData ?? []) as unknown as FlaggedRow[];
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="font-display text-3xl text-ink-900">Open reports</h1>
-      <p className="mt-1 text-sm text-ink-500">
-        {reports.length} open · account-review reports first. Resolve them in Supabase (set status to resolved).
-      </p>
-      {reports.length === 0 ? (
-        <p className="mt-8 rounded-2xl bg-cream-100 px-4 py-6 text-center text-sm text-ink-600">Nothing open. All quiet.</p>
-      ) : (
-        <ul className="mt-6 space-y-3">
-          {reports.map((r) => (
-            <li key={r.id} className="rounded-2xl border border-ink-100 bg-white p-4 shadow-card">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-medium text-ink-900">{r.reason}</span>
-                {r.needs_account_review && (
-                  <span className="rounded-full bg-ember-50 px-2 py-0.5 text-xs font-medium text-ember-800 ring-1 ring-ember-200">
-                    Account review
-                  </span>
+    <main className="mx-auto max-w-4xl space-y-10 px-4 py-10">
+      <section>
+        <h1 className="font-display text-3xl text-ink-900">Flagged accounts</h1>
+        <p className="mt-1 text-sm text-ink-500">From “Someone under 13” reports. Check the account, then mark it reviewed.</p>
+        {flagged.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-cream-100 px-4 py-4 text-sm text-ink-600">No flagged accounts.</p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {flagged.map((f) => (
+              <li key={f.user_id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-ember-200 bg-white p-4 shadow-card">
+                <div className="min-w-0 flex-1 text-sm">
+                  <p className="font-medium text-ink-900">
+                    {f.profile?.name || "Unknown"} {f.profile?.handle ? <span className="text-ink-500">@{f.profile.handle}</span> : null}
+                  </p>
+                  <p className="text-xs text-ink-400">
+                    {f.reason} · first flagged {when(f.first_flagged_at)} · <span className="font-mono">{f.user_id}</span>
+                  </p>
+                </div>
+                <form action={resolveFlaggedAccount}>
+                  <input type="hidden" name="userId" value={f.user_id} />
+                  <button type="submit" className={`${pill} bg-cream-100 text-ink-700 hover:bg-cream-200`}>
+                    Mark reviewed
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="font-display text-3xl text-ink-900">Open reports</h2>
+        <p className="mt-1 text-sm text-ink-500">{reports.length} open · account-review reports first.</p>
+        {reports.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-cream-100 px-4 py-4 text-sm text-ink-600">Nothing open. All quiet.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {reports.map((r) => (
+              <li key={r.id} className="rounded-2xl border border-ink-100 bg-white p-4 shadow-card">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-ink-900">{r.reason}</span>
+                  {r.needs_account_review && (
+                    <span className="rounded-full bg-ember-50 px-2 py-0.5 text-xs font-medium text-ember-800 ring-1 ring-ember-200">
+                      Account review
+                    </span>
+                  )}
+                  {r.moment?.hidden_pending_review && (
+                    <span className="rounded-full bg-cream-200 px-2 py-0.5 text-xs text-ink-600">Hidden pending review</span>
+                  )}
+                  <span className="ml-auto text-xs text-ink-400">{when(r.created_at)}</span>
+                </div>
+                {r.moment?.body && <p className="mt-2 text-sm text-ink-700">“{r.moment.body}”</p>}
+                {r.note && <p className="mt-1 text-sm text-ink-500">Note: {r.note}</p>}
+                <p className="mt-2 font-mono text-[11px] text-ink-400">
+                  moment {r.moment_id ?? "—"} · author {r.moment?.author_id ?? "—"} · reporter {r.reporter_id ?? "—"}
+                </p>
+                {r.moment_id && (
+                  <div className="mt-3 flex gap-2">
+                    <form action={restoreMoment}>
+                      <input type="hidden" name="momentId" value={r.moment_id} />
+                      <button type="submit" className={`${pill} bg-cream-100 text-ink-700 hover:bg-cream-200`}>
+                        Restore
+                      </button>
+                    </form>
+                    <form action={removeMoment}>
+                      <input type="hidden" name="momentId" value={r.moment_id} />
+                      <button type="submit" className={`${pill} text-ink-500 hover:bg-cream-100 hover:text-ink-800`}>
+                        Remove
+                      </button>
+                    </form>
+                  </div>
                 )}
-                {r.moment?.hidden_pending_review && (
-                  <span className="rounded-full bg-cream-200 px-2 py-0.5 text-xs text-ink-600">Hidden pending review</span>
-                )}
-                <span className="ml-auto text-xs text-ink-400">{new Date(r.created_at).toLocaleString("en-US")}</span>
-              </div>
-              {r.moment?.body && <p className="mt-2 text-sm text-ink-700">“{r.moment.body}”</p>}
-              {r.note && <p className="mt-1 text-sm text-ink-500">Note: {r.note}</p>}
-              <p className="mt-2 font-mono text-[11px] text-ink-400">
-                moment {r.moment_id ?? "—"} · author {r.moment?.author_id ?? "—"} · reporter {r.reporter_id ?? "—"}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
