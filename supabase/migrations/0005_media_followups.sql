@@ -136,12 +136,14 @@ begin
     return new;
   end if;
   if tg_op = 'INSERT' or new.media_path is distinct from old.media_path then
-    if not exists (
-      select 1 from public.media_uploads u
-       where u.path = new.media_path
-         and u.owner_id = new.author_id
-         and u.created_at > now() - interval '24 hours'
-    ) then
+    -- FOR SHARE locks the upload row until this insert commits, so the cleanup claim
+    -- (which deletes rows) can't remove it in between.
+    perform 1 from public.media_uploads u
+     where u.path = new.media_path
+       and u.owner_id = new.author_id
+       and u.created_at > now() - interval '24 hours'
+     for share;
+    if not found then
       raise exception 'Upload expired or unknown' using errcode = 'P0002';
     end if;
   end if;
