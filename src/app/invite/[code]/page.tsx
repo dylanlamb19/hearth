@@ -5,11 +5,15 @@ import { useParams } from "next/navigation";
 import { PublicFooter } from "@/components/PublicFooter";
 import { PublicHeader } from "@/components/PublicHeader";
 import { Button } from "@/components/Button";
+import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 
 /** Minimal invite landing — warm welcome + signup/login CTA. No referral tracking. */
 export default function InviteLandingPage() {
   const params = useParams<{ code: string }>();
   const code = (params?.code || "").trim();
+  const [blocked] = useAgeBlocked();
+
+  if (blocked) return <AgeBlockedScreen />;
 
   return (
     <div className="min-h-screen bg-cream-100">

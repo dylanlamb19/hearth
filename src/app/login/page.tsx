@@ -66,7 +66,7 @@ export default function LoginPage() {
             <div className="flex justify-end">
               <Link href="/forgot-password" className="text-sm text-ink-500 hover:text-ink-800">Forgot password?</Link>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-ember-700">{error}</p>}
             <Button type="submit" className="w-full">Sign in</Button>
           </form>
           <p className="mt-6 text-sm text-ink-500">

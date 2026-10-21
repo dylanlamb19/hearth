@@ -156,7 +156,7 @@ export default function WelcomePage() {
                   className={cn(
                     "w-full rounded-2xl border bg-cream-50 py-3 pl-9 pr-4 text-sm focus:ring-ember-300",
                     handleInvalid
-                      ? "border-red-300 focus:border-red-400"
+                      ? "border-ember-300 focus:border-ember-400"
                       : "border-ink-200 focus:border-ember-400",
                   )}
                   aria-invalid={handleInvalid}

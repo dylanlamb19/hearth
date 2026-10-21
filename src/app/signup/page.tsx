@@ -151,7 +151,7 @@ export default function SignupPage() {
                 I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and I’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
               </span>
             </label>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-ember-700">{error}</p>}
             <Button type="submit" className="w-full">Create account</Button>
           </form>
           <p className="mt-4 text-center text-xs text-ink-500">
