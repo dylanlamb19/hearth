@@ -14,8 +14,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [blocked] = useAgeBlocked();
+  const [busy, setBusy] = useState(false);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") || "");
@@ -24,7 +25,14 @@ export default function LoginPage() {
       setError("Use a valid email and a password with at least 8 characters.");
       return;
     }
-    const user = login(email, password);
+    setError("");
+    setBusy(true);
+    const { user, error: authError } = await login(email, password);
+    setBusy(false);
+    if (!user) {
+      setError(authError || "Could not sign in. Try again?");
+      return;
+    }
     if (needsOnboarding(user)) {
       router.push("/welcome");
     } else {
@@ -67,7 +75,7 @@ export default function LoginPage() {
               <Link href="/forgot-password" className="text-sm text-ink-500 hover:text-ink-800">Forgot password?</Link>
             </div>
             {error && <p className="text-sm text-ember-700">{error}</p>}
-            <Button type="submit" className="w-full">Sign in</Button>
+            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Opening the door…" : "Sign in"}</Button>
           </form>
           <p className="mt-6 text-sm text-ink-500">
             New here? <Link href="/signup" className="font-medium text-ink-800 underline-offset-2 hover:underline">Create an account</Link>

@@ -33,7 +33,7 @@ function isHandleTaken(handle: string, selfId?: string) {
 }
 
 export default function WelcomePage() {
-  const { user, ready, completeOnboarding, updateUser } = useAuth();
+  const { user, ready, completeOnboarding, updateUser, isHandleTaken: isHandleTakenRemote } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [bio, setBio] = useState("");
@@ -62,8 +62,24 @@ export default function WelcomePage() {
   }, [user, handleReady]);
 
   const effectiveHandle = normalizeHandle(handle);
-  const handleTaken = isHandleTaken(effectiveHandle, user?.id);
-  const handleInvalid = effectiveHandle.length < 3 || handleTaken;
+  const [remoteTaken, setRemoteTaken] = useState<{ handle: string; taken: boolean } | null>(null);
+  useEffect(() => {
+    if (effectiveHandle.length < 3) return;
+    let live = true;
+    const t = setTimeout(() => {
+      isHandleTakenRemote(effectiveHandle)
+        .then((taken) => live && setRemoteTaken({ handle: effectiveHandle, taken }))
+        .catch(() => live && setRemoteTaken({ handle: effectiveHandle, taken: false }));
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [effectiveHandle, isHandleTakenRemote]);
+  const handleChecking = effectiveHandle.length >= 3 && remoteTaken?.handle !== effectiveHandle;
+  const handleTaken =
+    isHandleTaken(effectiveHandle, user?.id) || (remoteTaken?.handle === effectiveHandle && remoteTaken.taken);
+  const handleInvalid = effectiveHandle.length < 3 || handleTaken || handleChecking;
 
   if (!ready) {
     return (
@@ -155,7 +171,7 @@ export default function WelcomePage() {
                   spellCheck={false}
                   className={cn(
                     "w-full rounded-2xl border bg-cream-50 py-3 pl-9 pr-4 text-sm focus:ring-ember-300",
-                    handleInvalid
+                    (handleInvalid && !handleChecking)
                       ? "border-ember-300 focus:border-ember-400"
                       : "border-ink-200 focus:border-ember-400",
                   )}
@@ -168,7 +184,9 @@ export default function WelcomePage() {
                   ? "That handle is already taken on Hearth. Try another."
                   : effectiveHandle.length > 0 && effectiveHandle.length < 3
                     ? "Use at least 3 characters."
-                    : "Prefilled from your name. You can edit it."}
+                    : handleChecking
+                      ? "Checking that handle…"
+                      : "Prefilled from your name. You can edit it."}
               </span>
             </label>
             <label className="block text-left text-sm">

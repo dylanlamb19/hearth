@@ -10,13 +10,15 @@ import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function SignupPage() {
-  const { login, updateUser } = useAuth();
+  const { signup } = useAuth();
   const router = useRouter();
   const [blocked, setBlocked] = useAgeBlocked();
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [checkEmail, setCheckEmail] = useState("");
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const name = String(data.get("name") || "");
@@ -41,8 +43,23 @@ export default function SignupPage() {
       setError("Password must be at least 8 characters.");
       return;
     }
-    login(email, password, name);
-    updateUser({ birthYear });
+    setError("");
+    setBusy(true);
+    const result = await signup(email, password, name, birthYear);
+    setBusy(false);
+    if (result.ageBlocked) {
+      setAgeBlocked();
+      setBlocked(true);
+      return;
+    }
+    if (result.needsEmailConfirm) {
+      setCheckEmail(email);
+      return;
+    }
+    if (!result.user) {
+      setError(result.error || "Could not create your account. Try again?");
+      return;
+    }
     router.push("/welcome");
   }
 
@@ -152,7 +169,12 @@ export default function SignupPage() {
               </span>
             </label>
             {error && <p className="text-sm text-ember-700">{error}</p>}
-            <Button type="submit" className="w-full">Create account</Button>
+            {checkEmail && (
+              <p className="rounded-2xl bg-cream-200 px-4 py-3 text-sm text-ink-700">
+                Almost in — we sent a confirmation link to {checkEmail}. Open it to finish setting up.
+              </p>
+            )}
+            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Setting your place…" : "Create account"}</Button>
           </form>
           <p className="mt-4 text-center text-xs text-ink-500">
             Free · No spam · You can delete anytime
