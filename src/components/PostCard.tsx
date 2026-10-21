@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Heart, MessageCircle, Share2, Bookmark, Globe2, Users, MoreHorizontal } from "lucide-react";
 import { Post, personById, reactionsForPost } from "@/data/seed";
@@ -8,6 +8,8 @@ import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
 import { useAuth } from "./AuthProvider";
+import { CommentsSection } from "./CommentsSection";
+import { listReactions, REACTION_EMOJI, REACTION_KINDS, setReaction, type Reaction, type ReactionKind } from "@/lib/social";
 
 function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
@@ -33,6 +35,25 @@ export function PostCard({
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState(post.body);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.comments);
+  const [stored, setStored] = useState<Reaction[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  // Stored Moments show the real count; sample posts keep their sample count plus local comments.
+  const onCommentCount = useCallback(
+    (n: number) => setCommentCount(/^[0-9a-f-]{36}$/i.test(post.id) ? n : post.comments + n),
+    [post.id, post.comments],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    listReactions(post.id, user?.id)
+      .then((list) => !cancelled && setStored(list))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, user?.id]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seedAuthor = personById(post.authorId);
   const author =
@@ -59,8 +80,28 @@ export function PostCard({
 
   if (!author) return null;
 
-  const reactions = reactionsForPost(post.id);
+  const seedReactions = reactionsForPost(post.id);
+  const mine = user ? stored.find((r) => r.userId === user.id)?.kind ?? null : null;
+  const reactions = [
+    ...seedReactions.filter((r) => !stored.some((s) => s.userId === r.personId)),
+    ...stored.map((r) => ({ emoji: REACTION_EMOJI[r.kind], personId: r.userId })),
+  ];
   const loveCount = reactions.length;
+
+  async function react(kind: ReactionKind | null) {
+    if (!user) return;
+    const prev = stored;
+    setPickerOpen(false);
+    setStored((list) => [...list.filter((r) => r.userId !== user.id), ...(kind ? [{ userId: user.id, kind }] : [])]);
+    try {
+      await setReaction(post.id, user.id, kind);
+    } catch (e) {
+      // Only this card's reactions roll back.
+      setStored(prev);
+      showToast((e as Error).message);
+    }
+  }
+
 
   function showToast(message: string) {
     setToast(message);
@@ -212,16 +253,61 @@ export function PostCard({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-1 text-sm text-ink-500">
+        <span className="relative inline-flex items-center">
+          <button
+            type="button"
+            aria-pressed={mine !== null}
+            onClick={() => void react(mine ? null : "love")}
+            className={`inline-flex items-center gap-1.5 rounded-l-full py-1.5 pl-3 pr-1 hover:bg-cream-100 ${mine ? "text-ember-700" : ""}`}
+          >
+            {mine && mine !== "love" ? (
+              <span aria-hidden>{REACTION_EMOJI[mine]}</span>
+            ) : (
+              <Heart className={`h-4 w-4 ${mine ? "fill-current" : ""}`} />
+            )}{" "}
+            {mine ? mine[0].toUpperCase() + mine.slice(1) : "Love"}
+          </button>
+          <button
+            type="button"
+            aria-label="More reactions"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((v) => !v)}
+            className="py-1.5 px-1 text-xs hover:bg-cream-100"
+          >
+            ▾
+          </button>
+          <button
+            type="button"
+            aria-label={`View ${loveCount} reactions`}
+            onClick={() => setReactionsOpen(true)}
+            className="rounded-r-full py-1.5 pl-1 pr-3 hover:bg-cream-100"
+          >
+            · {loveCount}
+          </button>
+          {pickerOpen && (
+            <span className="absolute bottom-full left-0 z-20 mb-1 flex gap-1 rounded-full border border-ink-100 bg-cream-50 px-2 py-1 shadow-card">
+              {REACTION_KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-label={k}
+                  aria-pressed={mine === k}
+                  onClick={() => void react(mine === k ? null : k)}
+                  className={`rounded-full px-1.5 py-1 text-lg hover:bg-cream-200 ${mine === k ? "bg-cream-200" : ""}`}
+                >
+                  {REACTION_EMOJI[k]}
+                </button>
+              ))}
+            </span>
+          )}
+        </span>
         <button
           type="button"
-          aria-label={`View ${loveCount} reactions`}
-          onClick={() => setReactionsOpen(true)}
+          aria-expanded={commentsOpen}
+          onClick={() => setCommentsOpen((v) => !v)}
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
         >
-          <Heart className="h-4 w-4" /> Love · {loveCount}
-        </button>
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <MessageCircle className="h-4 w-4" /> Comment · {post.comments}
+          <MessageCircle className="h-4 w-4" /> Comment · {commentCount}
         </button>
         <button
           type="button"
@@ -234,6 +320,8 @@ export function PostCard({
           <Bookmark className="h-4 w-4" /> Save
         </button>
       </div>
+
+      {commentsOpen && <CommentsSection momentId={post.id} momentAuthorId={post.authorId} onCount={onCommentCount} />}
 
       <ReactionsSheet
         open={reactionsOpen}
