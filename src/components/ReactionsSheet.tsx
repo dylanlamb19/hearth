@@ -4,6 +4,8 @@ import { useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import { Person, PostReaction } from "@/data/seed";
 import { Avatar } from "./Avatar";
+import { ReactionIcon } from "./icons/reactions";
+import { REACTION_LABEL, type ReactionKind } from "@/lib/reactionKinds";
 
 type ReactionsSheetProps = {
   open: boolean;
@@ -23,16 +25,18 @@ export function ReactionsSheet({
   const visible = useMemo(() => reactions.slice(0, MAX_VISIBLE), [reactions]);
 
   const groups = useMemo(() => {
-    const map = new Map<string, PostReaction[]>();
+    const map = new Map<ReactionKind, PostReaction[]>();
     for (const reaction of visible) {
-      const list = map.get(reaction.emoji) ?? [];
+      const list = map.get(reaction.kind) ?? [];
       list.push(reaction);
-      map.set(reaction.emoji, list);
+      map.set(reaction.kind, list);
     }
     return Array.from(map.entries());
   }, [visible]);
 
   const multiType = groups.length > 1;
+  const personFor = (r: PostReaction): Person | undefined =>
+    peopleById(r.personId) ?? (r.name ? { id: r.personId, name: r.name, handle: "", bio: "", mutuals: 0 } : undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -76,20 +80,18 @@ export function ReactionsSheet({
           {visible.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-ink-400">No reactions yet</p>
           ) : multiType ? (
-            groups.map(([emoji, list]) => (
-              <div key={emoji} className="mb-2">
-                <p className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-                  <span className="mr-1.5 text-base normal-case" aria-hidden>
-                    {emoji}
-                  </span>
-                  {list.length}
+            groups.map(([kind, list]) => (
+              <div key={kind} className="mb-2">
+                <p className="flex items-center px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+                  <ReactionIcon kind={kind} className="mr-1.5 h-4 w-4 text-ember-glow" />
+                  {REACTION_LABEL[kind]} · {list.length}
                 </p>
                 <ul>
                   {list.map((reaction) => (
                     <ReactorRow
-                      key={`${reaction.emoji}-${reaction.personId}`}
-                      person={peopleById(reaction.personId)}
-                      emoji={reaction.emoji}
+                      key={`${reaction.kind}-${reaction.personId}`}
+                      person={personFor(reaction)}
+                      kind={reaction.kind}
                       showEmoji
                     />
                   ))}
@@ -99,17 +101,17 @@ export function ReactionsSheet({
           ) : (
             <>
               <p className="px-4 py-2 text-xs font-medium text-ink-400">
-                <span className="mr-1.5 text-base" aria-hidden>
-                  {groups[0][0]}
+                <span className="inline-flex items-center">
+                  <ReactionIcon kind={groups[0][0]} className="mr-1.5 h-4 w-4 text-ember-glow" />
+                  {REACTION_LABEL[groups[0][0]]} · {groups[0][1].length}
                 </span>
-                {groups[0][1].length}
               </p>
               <ul>
                 {groups[0][1].map((reaction) => (
                   <ReactorRow
-                    key={`${reaction.emoji}-${reaction.personId}`}
-                    person={peopleById(reaction.personId)}
-                    emoji={reaction.emoji}
+                    key={`${reaction.kind}-${reaction.personId}`}
+                    person={personFor(reaction)}
+                    kind={reaction.kind}
                   />
                 ))}
               </ul>
@@ -123,11 +125,11 @@ export function ReactionsSheet({
 
 function ReactorRow({
   person,
-  emoji,
+  kind,
   showEmoji = false,
 }: {
   person: Person | undefined;
-  emoji: string;
+  kind: ReactionKind;
   showEmoji?: boolean;
 }) {
   if (!person) return null;
@@ -136,12 +138,10 @@ function ReactorRow({
       <Avatar name={person.name} online={person.online} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-ink-900">{person.name}</p>
-        <p className="truncate text-xs text-ink-400">@{person.handle}</p>
+        {person.handle && <p className="truncate text-xs text-ink-400">@{person.handle}</p>}
       </div>
       {showEmoji && (
-        <span className="text-base" aria-hidden>
-          {emoji}
-        </span>
+        <ReactionIcon kind={kind} className="h-5 w-5 text-ember-glow" />
       )}
     </li>
   );
