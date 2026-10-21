@@ -20,7 +20,7 @@ type ReportRow = {
 type FlaggedRow = {
   user_id: string;
   reason: string;
-  first_flagged_at: string;
+  last_flagged_at: string;
   profile: { name: string | null; handle: string | null } | null;
 };
 
@@ -44,9 +44,9 @@ export default async function AdminReportsPage() {
       .limit(200),
     admin
       .from("flagged_accounts")
-      .select("user_id, reason, first_flagged_at, profile:profiles(name, handle)")
+      .select("user_id, reason, last_flagged_at, profile:profiles(name, handle)")
       .eq("status", "open")
-      .order("first_flagged_at", { ascending: true }),
+      .order("last_flagged_at", { ascending: true }),
   ]);
   const reports = (reportData ?? []) as unknown as ReportRow[];
   const flagged = (flaggedData ?? []) as unknown as FlaggedRow[];
@@ -67,7 +67,7 @@ export default async function AdminReportsPage() {
                     {f.profile?.name || "Unknown"} {f.profile?.handle ? <span className="text-ink-500">@{f.profile.handle}</span> : null}
                   </p>
                   <p className="text-xs text-ink-400">
-                    {f.reason} · first flagged {when(f.first_flagged_at)} · <span className="font-mono">{f.user_id}</span>
+                    {f.reason} · last flagged {when(f.last_flagged_at)} · <span className="font-mono">{f.user_id}</span>
                   </p>
                 </div>
                 <form action={resolveFlaggedAccount}>

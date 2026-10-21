@@ -1,42 +1,69 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { MEDIA_BUCKET } from "@/lib/mediaLimits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const BATCH = 500;
+const CLAIM_BATCH = 500;
+const SWEEP_BATCH = 200;
 
-/** Daily (vercel.json): delete uploads never attached to a Moment and older than 24h. */
-export async function GET(request: NextRequest) {
+function authorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!secret) return false;
+  const given = Buffer.from(request.headers.get("authorization") || "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+async function removeFiles(admin: SupabaseClient, paths: string[], label: string): Promise<boolean> {
+  if (paths.length === 0) return true;
+  const { error } = await admin.storage.from(MEDIA_BUCKET).remove(paths);
+  if (error) console.error(`[hearth] ${label} removal failed`, { count: paths.length, error: error.message });
+  return !error;
+}
+
+/**
+ * Daily (vercel.json):
+ * 1) Claim unattached uploads older than 24h (rows deleted first, paths returned) and remove
+ *    exactly those files. On failure the rows are put back so the next run retries.
+ * 2) Sweep a bounded batch of untracked bucket files older than 24h that no live Moment uses
+ *    (files from before upload tracking existed).
+ */
+export async function GET(request: NextRequest) {
+  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const admin = getSupabaseAdminClient();
   if (!admin) return NextResponse.json({ error: "Not configured" }, { status: 503 });
 
-  const cutoff = new Date(Date.now() - MAX_AGE_MS).toISOString();
-  const { data, error } = await admin
-    .from("media_uploads")
-    .select("path")
-    .eq("attached", false)
-    .lt("created_at", cutoff)
-    .limit(BATCH);
-  if (error) {
-    console.error("[hearth] orphan cleanup query failed", { error: error.message });
-    return NextResponse.json({ error: "Query failed" }, { status: 500 });
+  const { data: claimed, error: claimError } = await admin.rpc("claim_orphan_uploads", { max_rows: CLAIM_BATCH });
+  if (claimError) {
+    console.error("[hearth] orphan claim failed", { error: claimError.message });
+    return NextResponse.json({ error: "Claim failed" }, { status: 500 });
   }
-  const paths = (data ?? []).map((r: { path: string }) => r.path);
-  if (paths.length === 0) return NextResponse.json({ removed: 0 });
+  const orphanPaths = ((claimed ?? []) as string[]).filter(Boolean);
+  let removed = 0;
+  if (await removeFiles(admin, orphanPaths, "orphan")) {
+    removed += orphanPaths.length;
+  } else {
+    const rows = orphanPaths.map((path) => ({
+      path,
+      owner_id: path.split("/")[0],
+      created_at: new Date(0).toISOString(),
+      attached: false,
+    }));
+    const { error } = await admin.from("media_uploads").upsert(rows, { onConflict: "path", ignoreDuplicates: true });
+    if (error) console.error("[hearth] orphan requeue failed", { error: error.message });
+  }
 
-  const { error: removeError } = await admin.storage.from(MEDIA_BUCKET).remove(paths);
-  if (removeError) {
-    console.error("[hearth] orphan file removal failed", { count: paths.length, error: removeError.message });
-    return NextResponse.json({ error: "Removal failed" }, { status: 500 });
+  const { data: untracked, error: sweepError } = await admin.rpc("find_untracked_media", { max_rows: SWEEP_BATCH });
+  if (sweepError) {
+    console.error("[hearth] untracked sweep failed", { error: sweepError.message });
+  } else {
+    const sweepPaths = ((untracked ?? []) as string[]).filter(Boolean);
+    if (await removeFiles(admin, sweepPaths, "untracked")) removed += sweepPaths.length;
   }
-  const { error: deleteError } = await admin.from("media_uploads").delete().in("path", paths);
-  if (deleteError) console.error("[hearth] media_uploads cleanup failed", { error: deleteError.message });
-  return NextResponse.json({ removed: paths.length });
+
+  return NextResponse.json({ removed });
 }
