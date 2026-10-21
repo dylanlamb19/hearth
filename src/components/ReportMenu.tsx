@@ -32,6 +32,7 @@ export function ReportMenu({
   parentMomentId,
   onReported,
   onDelete,
+  onBlocked,
 }: {
   subject?: string;
   /** Stable id persisted to localStorage `hearth_blocked` on block. */
@@ -43,6 +44,8 @@ export function ReportMenu({
   parentMomentId?: string;
   /** Adds a Delete entry (e.g. your own comment, or a comment on your Moment). */
   onDelete?: () => void;
+  /** Called after a successful block (e.g. to drop a knock or friend from a list). */
+  onBlocked?: (id: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -87,7 +90,10 @@ export function ReportMenu({
     if (!id) return;
     // No notification goes to the blocked person.
     blockPerson(id, subject)
-      .then(() => setSheet({ kind: "block-done" }))
+      .then(() => {
+        onBlocked?.(id);
+        setSheet({ kind: "block-done" });
+      })
       .catch(() => setSheet(null));
   }
 
