@@ -241,3 +241,30 @@ create index if not exists account_delete_attempts_user_idx
   on public.account_delete_attempts (user_id, created_at);
 alter table public.account_delete_attempts enable row level security;
 revoke all on public.account_delete_attempts from anon, authenticated;
+
+-- Atomic check-and-log for account-deletion password tries: a per-user advisory lock serializes
+-- concurrent requests, then count the last 15 minutes and, if under 5, log this try.
+-- Returns true when the request may go ahead. Service role only.
+create or replace function public.claim_account_delete_attempt(uid uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if uid is null then
+    return false;
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('account_delete:' || uid::text, 0));
+  if (
+    select count(*) from public.account_delete_attempts
+     where user_id = uid and created_at > now() - interval '15 minutes'
+  ) >= 5 then
+    return false;
+  end if;
+  insert into public.account_delete_attempts (user_id) values (uid);
+  return true;
+end;
+$$;
+revoke all on function public.claim_account_delete_attempt(uuid) from public, anon, authenticated;
+grant execute on function public.claim_account_delete_attempt(uuid) to service_role;
