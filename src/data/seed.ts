@@ -18,7 +18,11 @@ export type Post = {
   createdAt: string;
   loves: number;
   comments: number;
-  privacy: "friends" | "public";
+  privacy: "friends" | "everyone";
+  /** Feed: one of the unseen friend Moments shown on top under "From your people". */
+  fromYourPeople?: boolean;
+  /** ISO time, for keyset paging and seen tracking. */
+  createdAtIso?: string;
   /** Author display info for stored Moments whose author isn't in the seed. */
   authorName?: string;
   authorHandle?: string;
@@ -157,7 +161,7 @@ export const posts: Post[] = [
     createdAt: "Yesterday",
     loves: 0,
     comments: 3,
-    privacy: "public",
+    privacy: "everyone",
   },
   {
     id: "p4",

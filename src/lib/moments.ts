@@ -130,3 +130,94 @@ export async function deleteMoment(id: string): Promise<void> {
   });
   if (!res.ok) throw new Error("Couldn’t delete that Moment.");
 }
+
+// --- Feed (#29) ---------------------------------------------------------------
+
+export type FeedTab = "all" | "friends" | "following";
+export type FeedCursor = { at: string; id: string };
+export type FeedPage = { moments: Post[]; next: FeedCursor | null };
+
+type FeedRow = {
+  id: string;
+  author_id: string;
+  author_name: string | null;
+  author_handle: string | null;
+  body: string;
+  visibility: Post["privacy"];
+  created_at: string;
+  media_path: string | null;
+  media_type: "image" | "video" | null;
+  reaction_count: number;
+  comment_count: number;
+  my_reaction: string | null;
+  from_your_people: boolean;
+};
+
+export const FEED_PAGE_SIZE = 20;
+
+/**
+ * One page of the feed via get_feed (audience, blocks and removals are enforced there).
+ * Returns null in demo mode so the caller uses the sample feed.
+ */
+export async function getFeed(tab: FeedTab, cursor: FeedCursor | null): Promise<FeedPage | null> {
+  const sb = getSupabaseBrowserClient();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("get_feed", {
+    tab,
+    cursor_at: cursor?.at ?? null,
+    cursor_id: cursor?.id ?? null,
+  });
+  if (error) throw new Error("Couldn’t load your feed right now.");
+  const rows = (data ?? []) as FeedRow[];
+  const urls = await signMediaPaths(rows.map((r) => r.media_path).filter((p): p is string => Boolean(p)));
+  const moments = rows.map((r) => ({
+    ...rowToPost(
+      {
+        id: r.id,
+        author_id: r.author_id,
+        body: r.body,
+        visibility: r.visibility,
+        created_at: r.created_at,
+        is_demo: false,
+        media_path: r.media_path,
+        media_type: r.media_type,
+        author: { name: r.author_name, handle: r.author_handle },
+      },
+      urls,
+    ),
+    loves: r.reaction_count,
+    comments: r.comment_count,
+    fromYourPeople: r.from_your_people,
+    createdAtIso: r.created_at,
+  }));
+  const list = rows.filter((r) => !r.from_your_people);
+  const last = list[list.length - 1];
+  return { moments, next: list.length === FEED_PAGE_SIZE && last ? { at: last.created_at, id: last.id } : null };
+}
+
+const SEEN_DEMO_KEY = "hearth_seen_demo";
+
+export function demoSeenIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(SEEN_DEMO_KEY) || "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+
+/** Batched seen writes (private, server-only moment_views). Demo: localStorage. */
+export async function markSeen(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const sb = getSupabaseBrowserClient();
+  const stored = ids.filter(isStored);
+  if (!sb) {
+    const all = new Set([...demoSeenIds(), ...ids]);
+    localStorage.setItem(SEEN_DEMO_KEY, JSON.stringify([...all].slice(-500)));
+    return;
+  }
+  for (let i = 0; i < stored.length; i += 50) {
+    const { error } = await sb.rpc("mark_moments_seen", { ids: stored.slice(i, i + 50) });
+    if (error) return; // Rate-limited or offline: seen is best-effort.
+  }
+}
