@@ -43,6 +43,7 @@ export default async function AdminReportsPage() {
         "id, moment_id, reported_user_id, reported:profiles!reports_reported_user_id_fkey(name, handle), reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
       )
       .eq("status", "open")
+      .eq("reporter_blocked", false)
       .order("needs_account_review", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(200),

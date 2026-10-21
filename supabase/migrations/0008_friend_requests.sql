@@ -263,6 +263,23 @@ create trigger unfriend_on_block
 -- only allows Moments/comments); they go through report_user().
 alter table public.reports add column if not exists reported_user_id uuid references public.profiles (id) on delete cascade;
 alter table public.reports alter column moment_id drop not null;
+-- Set by report_user when the reported person has blocked the reporter. Not client-writable
+-- (no insert grant); such reports never flag an account, never auto-hide, and stay out of the
+-- admin queue.
+alter table public.reports add column if not exists reporter_blocked boolean not null default false;
+
+-- Supersedes 0004: a reporter_blocked report never needs account review.
+create or replace function public.flag_report_for_review()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  new.needs_account_review := (new.reason = 'Someone under 13' and not coalesce(new.reporter_blocked, false));
+  new.status := 'open';
+  return new;
+end;
+$$;
 alter table public.reports drop constraint if exists reports_has_target;
 alter table public.reports
   add constraint reports_has_target check (moment_id is not null or reported_user_id is not null);
@@ -270,7 +287,7 @@ create unique index if not exists reports_one_per_reporter_user
   on public.reports (reporter_id, reported_user_id) where moment_id is null and reported_user_id is not null;
 
 -- Generic error (HRPT1) only for yourself, a missing account or bad input. If the target has
--- blocked you, it returns quietly and saves nothing (so it can't count toward anything).
+-- blocked you, every path behaves the same; the saved report is just marked reporter_blocked.
 -- 20 person reports per 24 hours (HRPT2). Reporting the same person again quietly does nothing.
 -- "Someone under 13" flags the account for review at /admin/reports.
 create or replace function public.report_user(target uuid, reason text, note text default null)
@@ -281,6 +298,7 @@ set search_path = public, pg_temp
 as $$
 declare
   me uuid := auth.uid();
+  blocked_by_target boolean;
 begin
   if me is null then
     raise exception 'Not signed in' using errcode = '28000';
@@ -303,13 +321,12 @@ begin
          and r.created_at > now() - interval '24 hours') >= 20 then
     raise exception 'HEARTH_REPORT_LIMIT' using errcode = 'HRPT2';
   end if;
-  -- Blocked by the target: same checks as everyone above, then quietly save nothing.
-  if exists (select 1 from public.blocks b where b.blocker_id = target and b.blocked_id = me) then
-    return;
-  end if;
-  insert into public.reports (reporter_id, reported_user_id, reason, note)
-  values (me, target, reason, nullif(trim(coalesce(note, '')), ''));
-  if reason = 'Someone under 13' then
+  -- Blocked by the target: saved like any other (so it counts toward the duplicate check and
+  -- daily limit), but marked reporter_blocked: no under-13 flag, no auto-hide, not in the queue.
+  blocked_by_target := exists (select 1 from public.blocks b where b.blocker_id = target and b.blocked_id = me);
+  insert into public.reports (reporter_id, reported_user_id, reason, note, reporter_blocked)
+  values (me, target, reason, nullif(trim(coalesce(note, '')), ''), blocked_by_target);
+  if reason = 'Someone under 13' and not blocked_by_target then
     insert into public.flagged_accounts (user_id, reason)
     values (target, reason)
     on conflict (user_id) do update set status = 'open', reason = excluded.reason;
