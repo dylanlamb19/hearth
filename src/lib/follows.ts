@@ -52,7 +52,9 @@ export async function follow(targetId: string): Promise<void> {
   if (error.message.includes(FOLLOW_LIMIT_ERROR)) {
     throw new Error("You’ve followed a lot of people today. Try again tomorrow.");
   }
-  throw new Error("Couldn’t follow right now. Try again?");
+  // Same message whether they blocked you, don't exist, or anything else went wrong, so a
+  // follow attempt can't reveal a block.
+  throw new Error("Couldn’t follow right now.");
 }
 
 export async function unfollow(targetId: string): Promise<void> {

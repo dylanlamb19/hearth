@@ -69,22 +69,21 @@ export async function unblockPerson(id: string): Promise<void> {
   removeBlockedId(id);
 }
 
-/** One time per account: copy device-only blocks of real accounts into the table. */
+/**
+ * One time per account: copy device-only blocks of real accounts into the table. Each id is
+ * tried on its own; stale or missing ids (deleted accounts, bad data) are skipped. The
+ * device copies are cleared and the migration is marked done either way, so it never loops.
+ */
 export async function migrateLocalBlocks(userId: string): Promise<void> {
   const sb = getSupabaseBrowserClient();
   if (!sb || typeof window === "undefined") return;
   const flag = MIGRATED_PREFIX + userId;
   if (localStorage.getItem(flag)) return;
   const ids = getBlockedIds().filter((id) => UUID.test(id) && id !== userId);
-  if (ids.length > 0) {
-    const { error } = await sb
-      .from("blocks")
-      .upsert(ids.map((blocked_id) => ({ blocked_id })), { onConflict: "blocker_id,blocked_id", ignoreDuplicates: true });
-    if (error) {
-      console.warn("[hearth] block migration failed; will retry next sign-in:", error.message);
-      return;
-    }
-    ids.forEach((id) => removeBlockedId(id));
+  for (const id of ids) {
+    const { error } = await sb.from("blocks").insert({ blocked_id: id });
+    if (error && error.code !== "23505") console.warn("[hearth] skipped a stale device block:", error.code);
+    removeBlockedId(id);
   }
   localStorage.setItem(flag, new Date().toISOString());
 }
