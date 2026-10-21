@@ -207,9 +207,9 @@ begin
     insert into public.flagged_accounts (user_id, reason)
     values (author, new.reason)
     on conflict (user_id) do update
+      -- Re-flagging reopens and refreshes the reason (0005 also bumps last_flagged_at).
       set status = 'open',
-          reason = excluded.reason,
-          first_flagged_at = now();
+          reason = excluded.reason;
   end if;
 
   -- Qualifying reporters: account at least 3 days old and not blocked with the author
