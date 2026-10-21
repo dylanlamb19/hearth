@@ -25,6 +25,8 @@ module.exports = {
           700: "#b44310",
           800: "#903615",
           900: "#742f14",
+          // Glow's selected-reaction colour (separate so ember-600 stays as is).
+          glow: "#D97706",
         },
         ink: {
           50: "#f6f6f5",
