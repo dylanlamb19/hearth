@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
 import { Button } from "./Button";
-import { addBlockedId } from "@/lib/blocked";
+import { blockPerson } from "@/lib/blocks";
 import { addReportedId } from "@/lib/reported";
 import { fileReport } from "@/lib/reports";
 
@@ -73,8 +73,11 @@ export function ReportMenu({
 
   function confirmBlock() {
     const id = (subjectId ?? subject).trim();
-    if (id) addBlockedId(id);
-    setSheet({ kind: "block-done" });
+    if (!id) return;
+    // No notification goes to the blocked person.
+    blockPerson(id, subject)
+      .then(() => setSheet({ kind: "block-done" }))
+      .catch(() => setSheet(null));
   }
 
   return (

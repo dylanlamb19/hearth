@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { migrateLocalBlocks } from "@/lib/blocks";
 import {
   AUTH_COOKIE,
   DEMO_USER,
@@ -115,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       const row = await fetchProfile(sb!, authUser.id);
+      // One-time copy of device-only blocks into the blocks table.
+      void migrateLocalBlocks(authUser.id);
       if (!cancelled) {
         setUser(profileToSessionUser(authUser, row));
         setReady(true);
