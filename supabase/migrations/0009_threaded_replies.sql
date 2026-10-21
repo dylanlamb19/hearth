@@ -104,8 +104,18 @@ create index if not exists comment_loves_user_idx on public.comment_loves (user_
 alter table public.comment_loves enable row level security;
 revoke all on public.comment_loves from anon, authenticated;
 
+-- Append-only log for the love-toggle cap (about 60 per minute per person). Server-only.
+create table if not exists public.comment_love_events (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index if not exists comment_love_events_user_idx on public.comment_love_events (user_id, created_at);
+alter table public.comment_love_events enable row level security;
+revoke all on public.comment_love_events from anon, authenticated;
+
 -- Love or un-love a comment you can see. Returns whether you love it now. Same generic error
--- (HCLV1) for a missing, removed, hidden or blocked comment.
+-- (HCLV1) for a missing, removed, hidden or blocked comment, and when the cap is hit.
 create or replace function public.toggle_comment_love(target_comment uuid)
 returns boolean
 language plpgsql
@@ -129,6 +139,13 @@ begin
      or public.is_blocked_between(me, c.author_id) then
     raise exception 'HEARTH_COMMENT_LOVE_FAILED' using errcode = 'HCLV1';
   end if;
+  perform pg_advisory_xact_lock(hashtextextended('comment-love:' || me::text, 0));
+  if (select count(*) from public.comment_love_events e
+       where e.user_id = me and e.created_at > now() - interval '1 minute') >= 60 then
+    raise exception 'HEARTH_COMMENT_LOVE_FAILED' using errcode = 'HCLV1';
+  end if;
+  insert into public.comment_love_events (user_id) values (me);
+  delete from public.comment_love_events where user_id = me and created_at < now() - interval '1 hour';
   delete from public.comment_loves where comment_id = target_comment and user_id = me;
   if found then
     return false;
@@ -214,3 +231,44 @@ as $$
 $$;
 revoke all on function public.list_comments(uuid) from public, anon;
 grant execute on function public.list_comments(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Replies (supersedes 0007's check_new_comment). Same rules, except a reply to a reply is
+-- moved under its top-level comment instead of being rejected, after the same visibility and
+-- block checks on the comment actually replied to. Rate limit unchanged (30 per 10 minutes).
+-- ---------------------------------------------------------------------------
+create or replace function public.check_new_comment()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  parent record;
+begin
+  if new.parent_id is not null then
+    select c.moment_id, c.parent_id, c.author_id into parent
+      from public.comments c where c.id = new.parent_id;
+    if not found or parent.moment_id <> new.moment_id then
+      raise exception 'Reply must be on the same Moment' using errcode = '23514';
+    end if;
+    -- The replier must be able to see the comment they replied to: live, not hidden unless
+    -- theirs, Moment visible, and no block with its author either way.
+    if not public.can_report_comment(new.parent_id, new.moment_id)
+       or public.is_blocked_between(new.author_id, parent.author_id) then
+      raise exception 'Can''t reply to that comment' using errcode = '23514';
+    end if;
+    -- One level only: a reply to a reply goes under the top-level comment.
+    if parent.parent_id is not null then
+      new.parent_id := parent.parent_id;
+    end if;
+  end if;
+  if (
+    select count(*) from public.comments
+     where author_id = new.author_id and created_at > now() - interval '10 minutes'
+  ) >= 30 then
+    raise exception 'HEARTH_COMMENT_LIMIT' using errcode = 'HCOM1';
+  end if;
+  return new;
+end;
+$$;

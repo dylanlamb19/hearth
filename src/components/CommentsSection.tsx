@@ -32,11 +32,19 @@ export function CommentsSection({
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [draft, setDraft] = useState("");
   // Inline reply box: which top-level comment it sits under, and whose name is in the placeholder.
-  const [replyBox, setReplyBox] = useState<{ parentId: string; name: string } | null>(null);
+  const [replyBox, setReplyBox] = useState<{ parentId: string; name: string; openerId: string } | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const replyInput = useRef<HTMLTextAreaElement | null>(null);
+  // Reply buttons by comment id, so Esc/Cancel can hand focus back to the one that opened the box.
+  const replyButtons = useRef(new Map<string, HTMLButtonElement>());
+
+  function closeReply() {
+    const opener = replyBox?.openerId;
+    setReplyBox(null);
+    if (opener) requestAnimationFrame(() => replyButtons.current.get(opener)?.focus());
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -113,7 +121,7 @@ export function CommentsSection({
   /** Reply to a comment or to a reply: replies stay one level, under the top-level comment. */
   function openReply(c: Comment) {
     const parentId = c.parentId ?? c.id;
-    setReplyBox({ parentId, name: c.authorName || "Hearth member" });
+    setReplyBox({ parentId, name: c.authorName || "Hearth member", openerId: c.id });
     setReplyDraft("");
   }
 
@@ -197,7 +205,15 @@ export function CommentsSection({
                       Love{c.loveCount > 0 ? ` ${c.loveCount}` : ""}
                     </button>
                     <span aria-hidden>·</span>
-                    <button type="button" onClick={() => openReply(c)} className="hover:text-ink-800">
+                    <button
+                      type="button"
+                      ref={(el) => {
+                        if (el) replyButtons.current.set(c.id, el);
+                        else replyButtons.current.delete(c.id);
+                      }}
+                      onClick={() => openReply(c)}
+                      className="hover:text-ink-800"
+                    >
                       Reply
                     </button>
                   </>
@@ -253,11 +269,13 @@ export function CommentsSection({
           maxLength={1000}
           onChange={(e) => setReplyDraft(e.target.value)}
           onKeyDown={(e) => {
+            // IME composition (Japanese, Chinese, …): Enter confirms the character, not the reply.
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               void submitReply();
             } else if (e.key === "Escape") {
-              setReplyBox(null);
+              closeReply();
             }
           }}
           placeholder={`Reply to ${replyBox.name}…`}
@@ -266,7 +284,7 @@ export function CommentsSection({
         />
         <button
           type="button"
-          onClick={() => setReplyBox(null)}
+          onClick={closeReply}
           className="px-1 py-1.5 text-xs text-ink-400 hover:text-ink-700"
         >
           Cancel
