@@ -9,6 +9,7 @@ export const metadata = { title: "Open reports", robots: { index: false } };
 type ReportRow = {
   id: string;
   moment_id: string | null;
+  reported_user_id: string | null;
   reporter_id: string | null;
   reason: string;
   note: string | null;
@@ -38,7 +39,7 @@ export default async function AdminReportsPage() {
     admin
       .from("reports")
       .select(
-        "id, moment_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
+        "id, moment_id, reported_user_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
       )
       .eq("status", "open")
       .order("needs_account_review", { ascending: false })
@@ -120,6 +121,7 @@ export default async function AdminReportsPage() {
                 )}
                 {r.note && <p className="mt-1 text-sm text-ink-500">Note: {r.note}</p>}
                 <p className="mt-2 font-mono text-[11px] text-ink-400">
+                  {r.reported_user_id && <>reported person {r.reported_user_id} · </>}
                   {r.comment_id && <>comment {r.comment_id} · comment author {r.comment?.author_id ?? "—"} · </>}
                   moment {r.moment_id ?? "—"} · author {r.moment?.author_id ?? "—"} · reporter {r.reporter_id ?? "—"}
                 </p>

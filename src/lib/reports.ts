@@ -25,3 +25,19 @@ export async function fileReport(input: {
   // 23505: you already reported this Moment; that's fine.
   if (error && error.code !== "23505") console.warn("[hearth] report failed:", error.message);
 }
+
+const UUID = /^[0-9a-f-]{36}$/i;
+
+/**
+ * Reports a person (not a Moment) via the report_user RPC. Demo mode and sample people
+ * aren't in the database, so it's a no-op there; throws only on the daily limit.
+ */
+export async function reportUser(input: { userId: string; reason: string; note?: string }): Promise<void> {
+  const sb = getSupabaseBrowserClient();
+  if (!sb || !UUID.test(input.userId)) return;
+  const { error } = await sb.rpc("report_user", { target: input.userId, reason: input.reason, note: input.note || null });
+  if (!error) return;
+  if (error.code === "HRPT2") throw new Error("That’s a lot of reports for one day. Try again tomorrow.");
+  // HRPT1 (generic) is quiet on purpose: same thank-you either way.
+  if (error.code !== "HRPT1") console.warn("[hearth] report failed:", error.message);
+}
