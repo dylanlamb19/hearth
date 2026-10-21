@@ -8,6 +8,8 @@ export type SessionUser = {
   interests?: string[];
   followingIds?: string[];
   onboardingCompletedAt?: string;
+  /** Only the year is kept, and only for the 13+ check. */
+  birthYear?: number;
 };
 
 export const DEMO_USER: SessionUser = {

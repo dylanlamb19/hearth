@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { birthYearOptions, isAgeBlocked, isUnderMinAge, setAgeBlocked } from "@/lib/age";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function SignupPage() {
-  const { login } = useAuth();
+  const { login, updateUser } = useAuth();
   const router = useRouter();
+  const [blocked, setBlocked] = useState(false);
+  // Read after mount so the prerendered form and the client agree on first paint.
+  useEffect(() => {
+    if (isAgeBlocked()) setBlocked(true);
+  }, []);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -20,6 +26,16 @@ export default function SignupPage() {
     const email = String(data.get("email") || "");
     const password = String(data.get("password") || "");
     const terms = data.get("terms") === "on";
+    const birthYear = Number(data.get("birthYear") || 0);
+    if (!birthYear) {
+      setError("Please choose your birth year.");
+      return;
+    }
+    if (isUnderMinAge(birthYear)) {
+      setAgeBlocked();
+      setBlocked(true);
+      return;
+    }
     if (!terms) {
       setError("Please agree to the Terms to continue.");
       return;
@@ -29,7 +45,18 @@ export default function SignupPage() {
       return;
     }
     login(email, password, name);
+    updateUser({ birthYear });
     router.push("/welcome");
+  }
+
+  if (blocked) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-cream-100 px-6 py-12 text-center">
+        <Logo />
+        <h1 className="mt-10 font-display text-3xl text-ink-900 text-balance">Hearth is for people 13 and older.</h1>
+        <p className="mt-4 max-w-sm text-ink-600">Thanks for stopping by.</p>
+      </div>
+    );
   }
 
   return (
@@ -110,10 +137,29 @@ export default function SignupPage() {
                 At least 8 characters. Longer is stronger — mix letters, numbers, and a symbol if you can.
               </span>
             </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block text-ink-600">Birth year</span>
+              <select
+                name="birthYear"
+                required
+                defaultValue=""
+                className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300"
+              >
+                <option value="" disabled>
+                  Choose a year
+                </option>
+                {birthYearOptions().map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1.5 block text-xs text-ink-400">Only the year is kept, just to check you’re 13 or older.</span>
+            </label>
             <label className="flex items-start gap-3 text-sm text-ink-600">
               <input name="terms" type="checkbox" className="mt-1 rounded border-ink-300 text-hearth focus:ring-ember-300" />
               <span>
-                I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link> and have read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice.
+                By creating an account you agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and you’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
               </span>
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -126,6 +172,8 @@ export default function SignupPage() {
             <Link href="/terms" className="underline underline-offset-2 hover:text-ink-700">Terms</Link>
             {" · "}
             <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-700">Privacy</Link>
+            {" · "}
+            <Link href="/dmca" className="underline underline-offset-2 hover:text-ink-700">DMCA</Link>
           </p>
           <p className="mt-6 text-sm text-ink-500">
             Already here? <Link href="/login" className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>
