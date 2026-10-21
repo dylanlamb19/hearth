@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
+import { Flag, Ban, MoreHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "./Button";
 import { blockPerson } from "@/lib/blocks";
 import { addReportedId } from "@/lib/reported";
@@ -29,7 +29,9 @@ export function ReportMenu({
   subject = "this",
   subjectId,
   itemId,
+  parentMomentId,
   onReported,
+  onDelete,
 }: {
   subject?: string;
   /** Stable id persisted to localStorage `hearth_blocked` on block. */
@@ -37,6 +39,10 @@ export function ReportMenu({
   /** The reported item (e.g. a Moment id). Hidden for the reporter right after reporting. */
   itemId?: string;
   onReported?: (itemId: string) => void;
+  /** Set when reporting a comment: itemId is the comment, this is its Moment. */
+  parentMomentId?: string;
+  /** Adds a Delete entry (e.g. your own comment, or a comment on your Moment). */
+  onDelete?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -63,7 +69,12 @@ export function ReportMenu({
   function confirmReport() {
     if (sheet?.kind !== "report" || !sheet.reason) return;
     // Saved to Supabase when configured (insert-only); always hidden locally right away.
-    void fileReport({ momentId: itemId, reason: sheet.reason, note: sheet.note.trim() || undefined });
+    void fileReport({
+      momentId: parentMomentId ?? itemId,
+      commentId: parentMomentId ? itemId : undefined,
+      reason: sheet.reason,
+      note: sheet.note.trim() || undefined,
+    });
     if (itemId) {
       addReportedId(itemId);
       onReported?.(itemId);
@@ -108,6 +119,18 @@ export function ReportMenu({
           >
             <Ban className="h-4 w-4 text-ink-500" /> Block
           </button>
+          {onDelete && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink-700 hover:bg-cream-100"
+              onClick={() => {
+                setMenuOpen(false);
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-ink-500" /> Delete
+            </button>
+          )}
         </div>
       )}
 
