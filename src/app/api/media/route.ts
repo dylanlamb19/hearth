@@ -77,5 +77,8 @@ export async function POST(request: NextRequest) {
     .from(MEDIA_BUCKET)
     .upload(path, output, { contentType: "image/jpeg", upsert: false });
   if (error) return fail(500, "Couldn’t upload that photo. Try again?");
+  // Track it so it can be cleaned up if it's never attached to a Moment.
+  const { error: trackError } = await admin.from("media_uploads").insert({ path, owner_id: userId });
+  if (trackError) console.error("[hearth] media_uploads insert failed", { path, error: trackError.message });
   return NextResponse.json({ path, type: "image" });
 }
