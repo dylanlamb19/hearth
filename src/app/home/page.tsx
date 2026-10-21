@@ -12,6 +12,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
 import { createMoment, deleteMoment, listMoments, updateMoment } from "@/lib/moments";
+import { checkMedia, mediaKindOf, uploadMedia, type MediaKind } from "@/lib/media";
+import { getReportedIds } from "@/lib/reported";
 import { cn } from "@/lib/utils";
 
 const tabs = ["For you", "Following", "Friends", "Nearby"];
@@ -41,14 +43,17 @@ export default function HomePage() {
   const [tab, setTab] = useState("For you");
   const [audience, setAudience] = useState<"friends" | "public">("friends");
   const [draft, setDraft] = useState("");
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
-  const [videoStub, setVideoStub] = useState(false);
+  const [attachment, setAttachment] = useState<{ url: string; file: File; kind: MediaKind } | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [reportedIds, setReportedIds] = useState<string[]>([]);
   const [feed, setFeed] = useState<Post[]>(seedPosts);
   const [toast, setToast] = useState<string | null>(null);
 
   // Re-read localStorage block list each render (free-tier, this device).
   const blockedIds = new Set(getBlockedIds());
-  const visibleFeed = feed.filter((post) => !blockedIds.has(post.authorId));
+  // Reported Moments disappear right away for the reporter (this device).
+  const visibleFeed = feed.filter((post) => !blockedIds.has(post.authorId) && !reportedIds.includes(post.id));
   const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
   const suggestions = people
     .filter((p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id))
@@ -57,7 +62,7 @@ export default function HomePage() {
     (p) => p.id !== "u-ember" && p.id !== user?.id && !blockedIds.has(p.id),
   );
 
-  const canShare = draft.trim().length > 0 || attachedImage !== null || videoStub;
+  const canShare = draft.trim().length > 0 || attachment !== null;
 
   // Stored Moments (Supabase) go on top of the seed feed; demo mode returns none.
   useEffect(() => {
@@ -77,6 +82,10 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    setReportedIds(getReportedIds());
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("compose") !== "1") return;
     setCompose(true);
@@ -93,9 +102,9 @@ export default function HomePage() {
     if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
   }
 
-  function clearAttachedImage() {
-    setAttachedImage((prev) => {
-      revokeIfObjectUrl(prev);
+  function clearAttachment() {
+    setAttachment((prev) => {
+      revokeIfObjectUrl(prev?.url ?? null);
       return null;
     });
   }
@@ -106,44 +115,57 @@ export default function HomePage() {
     toastTimer.current = setTimeout(() => setToast(null), 2800);
   }
 
-  function handlePhotoPick(files: FileList | null) {
+  function handleMediaPick(files: FileList | null, input: HTMLInputElement | null) {
     const file = files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    if (input) input.value = "";
+    if (!file) return;
+    const problem = checkMedia(file);
+    const kind = mediaKindOf(file);
+    if (problem || !kind) {
+      showToast(problem || "That file type isn’t supported.");
+      return;
+    }
     const url = URL.createObjectURL(file);
-    setAttachedImage((prev) => {
-      revokeIfObjectUrl(prev);
-      return url;
+    setAttachment((prev) => {
+      revokeIfObjectUrl(prev?.url ?? null);
+      return { url, file, kind };
     });
-    setVideoStub(false);
-    if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
   async function handleShare() {
-    if (!canShare || !user) return;
+    if (!canShare || !user || sharing) return;
     const body =
       draft.trim() ||
-      (attachedImage
+      (attachment?.kind === "image"
         ? "Shared a photo by the hearth."
-        : videoStub
+        : attachment?.kind === "video"
           ? "Shared a video by the hearth."
           : "");
     if (!body) return;
 
+    setSharing(true);
     let saved: Post;
     try {
-      saved = await createMoment({ authorId: user.id, body, visibility: audience });
-    } catch {
-      showToast("Couldn’t share that — try again.");
+      // Supabase: upload first (photos are resized and stripped of EXIF). Demo: returns null.
+      const media = attachment ? await uploadMedia(attachment.file) : null;
+      saved = await createMoment({ authorId: user.id, body, visibility: audience, media });
+    } catch (err) {
+      setSharing(false);
+      showToast(err instanceof Error && err.message ? err.message : "Couldn’t share that — try again.");
       return;
     }
-    // Photos stay on this device for now (no storage bucket yet).
-    const next: Post = attachedImage ? { ...saved, image: attachedImage } : saved;
+    setSharing(false);
+    // Demo mode (or before a signed URL is ready): keep the local preview on the card.
+    const next: Post =
+      attachment && !saved.image && !saved.video
+        ? { ...saved, ...(attachment.kind === "image" ? { image: attachment.url } : { video: attachment.url }) }
+        : saved;
 
     setFeed((prev) => [next, ...prev]);
     setDraft("");
-    // Keep object URL alive for the feed card; only clear composer state.
-    setAttachedImage(null);
-    setVideoStub(false);
+    // Keep a local object URL alive for the feed card; only clear composer state.
+    if (next.image === attachment?.url || next.video === attachment?.url) setAttachment(null);
+    else clearAttachment();
     showToast("Shared to the hearth.");
   }
 
@@ -175,10 +197,10 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                aria-pressed={attachedImage !== null}
+                aria-pressed={attachment?.kind === "image"}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
-                  attachedImage
+                  attachment?.kind === "image"
                     ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300"
                     : "text-ink-600",
                 )}
@@ -188,42 +210,48 @@ export default function HomePage() {
               <input
                 ref={photoInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
                 className="sr-only"
                 tabIndex={-1}
                 aria-hidden
-                onChange={(e) => handlePhotoPick(e.target.files)}
+                onChange={(e) => handleMediaPick(e.target.files, photoInputRef.current)}
               />
               <button
                 type="button"
-                onClick={() => {
-                  setVideoStub((v) => !v);
-                  if (!videoStub) clearAttachedImage();
-                }}
-                aria-pressed={videoStub}
+                onClick={() => videoInputRef.current?.click()}
+                aria-pressed={attachment?.kind === "video"}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
-                  videoStub ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
+                  attachment?.kind === "video" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
                 )}
               >
                 <Video className="h-4 w-4 text-ember-500" /> Video
               </button>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden
+                onChange={(e) => handleMediaPick(e.target.files, videoInputRef.current)}
+              />
               <button type="button" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 hover:bg-cream-100">
                 <Smile className="h-4 w-4 text-ember-500" /> Feeling
               </button>
             </div>
-            {attachedImage && (
+            {attachment?.kind === "image" && (
               <div className="mt-3">
                 <div className="relative inline-block rounded-2xl bg-cream-100 p-1 ring-1 ring-ink-100/80">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={attachedImage}
+                    src={attachment.url}
                     alt="Selected photo preview"
                     className="h-24 w-24 rounded-xl object-cover"
                   />
                   <button
                     type="button"
-                    onClick={clearAttachedImage}
+                    onClick={clearAttachment}
                     aria-label="Remove photo"
                     className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-cream-50 text-ink-600 shadow-soft ring-1 ring-ink-100 transition hover:bg-cream-100 hover:text-ink-900"
                   >
@@ -232,8 +260,13 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-            {videoStub && !attachedImage && (
-              <p className="mt-2 text-xs text-ink-400">Video attached (stub). Upload comes later.</p>
+            {attachment?.kind === "video" && (
+              <p className="mt-2 flex items-center gap-2 text-xs text-ink-500">
+                Video attached · {(attachment.file.size / (1024 * 1024)).toFixed(1)} MB
+                <button type="button" onClick={clearAttachment} className="underline underline-offset-2 hover:text-ink-800">
+                  Remove
+                </button>
+              </p>
             )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5" role="group" aria-label="Who can see this">
@@ -267,7 +300,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={handleShare}
-                disabled={!canShare}
+                disabled={!canShare || sharing}
                 className={cn(
                   "inline-flex items-center justify-center rounded-full bg-cream-100 px-5 py-2 text-sm font-medium text-ink-800 shadow-soft ring-1 ring-ink-100/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400",
                   canShare
@@ -316,6 +349,7 @@ export default function HomePage() {
                   showToast("Couldn’t save that edit — try again.");
                 }
               }}
+              onReported={(id) => setReportedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))}
               onDelete={async (id) => {
                 const index = feed.findIndex((p) => p.id === id);
                 const removed = feed[index];

@@ -4,8 +4,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
 import { Button } from "./Button";
 import { addBlockedId } from "@/lib/blocked";
+import { addReportedId } from "@/lib/reported";
 
 const REPORT_REASONS = [
+  "Nudity or sexual content",
+  "Private photo of me",
+  "Someone under 13",
   "Spam",
   "Harassment",
   "Hate",
@@ -23,10 +27,15 @@ type Sheet =
 export function ReportMenu({
   subject = "this",
   subjectId,
+  itemId,
+  onReported,
 }: {
   subject?: string;
   /** Stable id persisted to localStorage `hearth_blocked` on block. */
   subjectId?: string;
+  /** The reported item (e.g. a Moment id). Hidden for the reporter right after reporting. */
+  itemId?: string;
+  onReported?: (itemId: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -61,6 +70,10 @@ export function ReportMenu({
       });
     } catch {
       /* ignore */
+    }
+    if (itemId) {
+      addReportedId(itemId);
+      onReported?.(itemId);
     }
     setSheet({ kind: "report-thanks" });
   }

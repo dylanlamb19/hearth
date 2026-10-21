@@ -17,8 +17,11 @@ export function PostCard({
   post,
   onEdit,
   onDelete,
+  onReported,
 }: {
   post: Post;
+  /** Called after you report this Moment, so the feed can hide it. */
+  onReported?: (id: string) => void;
   /** Shown in your own Moment's menu when provided. */
   onEdit?: (id: string, body: string) => void;
   onDelete?: (id: string) => void;
@@ -134,9 +137,15 @@ export function PostCard({
             )}
           </div>
         ) : (
-          <ReportMenu subject={author.name} subjectId={author.id} />
+          <ReportMenu subject={author.name} subjectId={author.id} itemId={post.id} onReported={onReported} />
         )}
       </div>
+
+      {post.video && (
+        <div className="mt-4 overflow-hidden rounded-2xl bg-ink-900">
+          <video src={post.video} controls playsInline preload="metadata" className="max-h-[70vh] w-full" />
+        </div>
+      )}
 
       {post.image && (
         <div className="relative mt-4 aspect-[16/10] overflow-hidden rounded-2xl bg-cream-200">
