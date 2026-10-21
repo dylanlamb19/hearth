@@ -10,7 +10,7 @@ import { needsOnboarding } from "@/lib/auth";
 import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, mode } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
   const [blocked] = useAgeBlocked();
@@ -80,7 +80,7 @@ export default function LoginPage() {
           <p className="mt-6 text-sm text-ink-500">
             New here? <Link href="/signup" className="font-medium text-ink-800 underline-offset-2 hover:underline">Create an account</Link>
           </p>
-          <p className="mt-4 text-xs text-ink-400">Demo: ember@hearth.demo / hearth123</p>
+          {mode === "demo" && <p className="mt-4 text-xs text-ink-400">Demo: sign in as ember@hearth.demo</p>}
         </div>
       </div>
     </div>

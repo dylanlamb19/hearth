@@ -8,10 +8,9 @@ import {
   decodeSession,
   encodeSession,
   needsOnboarding as needsOnboardingFor,
-  resolveKnownUser,
   withCanonicalIdentity,
 } from "@/lib/auth";
-import { handleFromName, normalizeHandle } from "@/lib/utils";
+import { AGE_BLOCK_ERROR } from "@/lib/age";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
@@ -35,7 +34,7 @@ type AuthContextValue = {
   ready: boolean;
   /** "supabase" when env keys are set, otherwise the demo cookie fallback. */
   mode: AuthMode;
-  /** True for the shared ember@hearth.demo login while real accounts are on (changes stay on this device). */
+  /** True when Supabase isn't configured and the shared demo session is in use. */
   isDemo: boolean;
   needsOnboarding: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
@@ -48,7 +47,12 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const DEMO_PASSWORD = "hearth123";
+/**
+ * Demo mode only (no Supabase keys). Optional: set NEXT_PUBLIC_DEMO_PASSWORD to require it;
+ * otherwise any password works for the one demo email. No password lives in source.
+ */
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
+const DEMO_ONLY_MESSAGE = "Real accounts aren’t open yet. Try the demo: ember@hearth.demo.";
 
 function readCookie(name: string) {
   if (typeof document === "undefined") return null;
@@ -72,20 +76,10 @@ function friendlyError(message: string) {
   return message;
 }
 
-/** Demo cookie login — used for everything when Supabase isn't configured. */
-function demoCookieLogin(email: string, name?: string, handle?: string): SessionUser {
-  const normalized = email.trim().toLowerCase();
-  const known = resolveKnownUser(normalized);
-  if (known) {
-    writeCookie(AUTH_COOKIE, encodeSession(known));
-    return known;
-  }
-  const displayName = name?.trim() || normalized.split("@")[0] || "Friend";
-  const nextHandle =
-    (handle && normalizeHandle(handle)) || handleFromName(name?.trim() ? name : displayName) || "friend";
-  const next = withCanonicalIdentity({ id: "u-local", name: displayName, email: normalized, handle: nextHandle });
-  writeCookie(AUTH_COOKIE, encodeSession(next));
-  return next;
+/** Demo cookie session — only when Supabase isn't configured, and only for ember@hearth.demo. */
+function demoCookieLogin(): SessionUser {
+  writeCookie(AUTH_COOKIE, encodeSession(DEMO_USER));
+  return DEMO_USER;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -93,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
 
-  const isDemo = mode === "supabase" && user?.email === DEMO_USER.email;
+  const isDemo = mode === "demo" && user !== null;
 
   useEffect(() => {
     let cancelled = false;
@@ -101,20 +95,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cookieUser = decodeSession(readCookie(AUTH_COOKIE));
 
     if (!sb) {
-      if (cookieUser) writeCookie(AUTH_COOKIE, encodeSession(cookieUser));
-      setUser(cookieUser);
+      // Demo mode: only the shared demo account may hold a cookie session.
+      const demoCookie = cookieUser?.email === DEMO_USER.email ? cookieUser : null;
+      if (cookieUser && !demoCookie) clearCookie(AUTH_COOKIE);
+      setUser(demoCookie);
       setReady(true);
       return;
     }
 
-    // Supabase mode: only the shared demo login may still ride the cookie.
-    const demoCookie = cookieUser?.email === DEMO_USER.email ? cookieUser : null;
-    if (cookieUser && !demoCookie) clearCookie(AUTH_COOKIE);
+    // Supabase mode: no demo cookie at all.
+    if (cookieUser) clearCookie(AUTH_COOKIE);
 
     async function hydrate(authUser: import("@supabase/supabase-js").User | null) {
       if (!authUser) {
         if (!cancelled) {
-          setUser(demoCookie);
+          setUser(null);
           setReady(true);
         }
         return;
@@ -145,15 +140,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const normalized = email.trim().toLowerCase();
       const sb = getSupabaseBrowserClient();
       if (!sb) {
-        const next = demoCookieLogin(normalized);
+        if (normalized !== DEMO_USER.email) return { user: null, error: DEMO_ONLY_MESSAGE };
+        if (DEMO_PASSWORD && password !== DEMO_PASSWORD) {
+          return { user: null, error: "That email and password don't match. Try again?" };
+        }
+        const next = demoCookieLogin();
         setUser(next);
         return { user: next };
-      }
-      if (normalized === DEMO_USER.email) {
-        if (password !== DEMO_PASSWORD) return { user: null, error: "The demo password is hearth123." };
-        writeCookie(AUTH_COOKIE, encodeSession(DEMO_USER));
-        setUser(DEMO_USER);
-        return { user: DEMO_USER };
       }
       const { data, error } = await sb.auth.signInWithPassword({ email: normalized, password });
       if (error || !data.user) return { user: null, error: friendlyError(error?.message ?? "Could not sign in.") };
@@ -170,24 +163,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string, name: string, birthYear: number): Promise<AuthResult> => {
       const normalized = email.trim().toLowerCase();
       const sb = getSupabaseBrowserClient();
-      if (!sb) {
-        const next = { ...demoCookieLogin(normalized, name), birthYear };
-        writeCookie(AUTH_COOKIE, encodeSession(next));
-        setUser(next);
-        return { user: next };
-      }
-      if (normalized === DEMO_USER.email) return { user: null, error: "That's the shared demo account — sign in instead." };
+      if (!sb) return { user: null, error: DEMO_ONLY_MESSAGE };
       const { data, error } = await sb.auth.signUp({
         email: normalized,
         password,
         options: {
-          // birth_year is checked again by the signup trigger (0002_age_gate.sql).
-          data: { name: name.trim(), birth_year: birthYear },
-          emailRedirectTo: typeof window !== "undefined" ? window.location.origin + "/welcome" : undefined,
+          // birth_year is checked again by the signup trigger (0002_age_gate.sql);
+          // terms_accepted sets profiles.terms_accepted_at.
+          data: { name: name.trim(), birth_year: birthYear, terms_accepted: true },
+          emailRedirectTo:
+            typeof window !== "undefined" ? window.location.origin + "/auth/callback?next=/welcome" : undefined,
         },
       });
       if (error) {
-        if (/hearth_age_blocked|database error saving new user/i.test(error.message)) {
+        // Only the trigger's own code counts. GoTrue usually hides trigger messages behind a
+        // generic "Database error saving new user", which we show as a normal error, never the block screen.
+        if (error.message.includes(AGE_BLOCK_ERROR)) {
           return { user: null, ageBlocked: true };
         }
         return { user: null, error: friendlyError(error.message) };
@@ -215,8 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!prev) return prev;
         const next = withCanonicalIdentity({ ...prev, ...patch });
         const sb = getSupabaseBrowserClient();
-        const cookieBacked = !sb || prev.email === DEMO_USER.email;
-        if (cookieBacked) {
+        if (!sb) {
           writeCookie(AUTH_COOKIE, encodeSession(next));
         } else {
           const row = sessionPatchToRow(patch);
@@ -251,10 +241,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isHandleTaken = useCallback(
     async (handle: string) => {
       const sb = getSupabaseBrowserClient();
-      if (!sb || !handle || isDemo) return false;
+      if (!sb || !handle) return false;
+      // Throws if the check fails; callers must not treat that as "free".
       return isHandleTakenInDb(sb, handle, user?.id);
     },
-    [user?.id, isDemo],
+    [user?.id],
   );
 
   const value = useMemo(

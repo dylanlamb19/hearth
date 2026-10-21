@@ -69,7 +69,8 @@ export default function WelcomePage() {
     const t = setTimeout(() => {
       isHandleTakenRemote(effectiveHandle)
         .then((taken) => live && setRemoteTaken({ handle: effectiveHandle, taken }))
-        .catch(() => live && setRemoteTaken({ handle: effectiveHandle, taken: false }));
+        // If the check fails, don't call the handle free.
+        .catch(() => live && setRemoteTaken({ handle: effectiveHandle, taken: true }));
     }, 300);
     return () => {
       live = false;
