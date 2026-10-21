@@ -8,7 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/components/AuthProvider";
 import { personById } from "@/data/seed";
-import { getBlockedIds, removeBlockedId } from "@/lib/blocked";
+import { blockedName, listBlockedIds, unblockPerson } from "@/lib/blocks";
 
 type BlockedPerson = {
   id: string;
@@ -21,6 +21,8 @@ function resolveBlockedPerson(
   session?: { id: string; name: string; handle: string } | null,
 ): BlockedPerson {
   const seed = personById(id);
+  const remembered = blockedName(id);
+  if (!seed && remembered) return { id, name: remembered, handle: "" };
   if (seed) return { id: seed.id, name: seed.name, handle: seed.handle };
   if (session && session.id === id) {
     return { id: session.id, name: session.name, handle: session.handle };
@@ -41,14 +43,13 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function refreshList() {
-    const ids = getBlockedIds();
+  async function refreshList() {
+    const ids = await listBlockedIds();
     setBlocked(ids.map((id) => resolveBlockedPerson(id, user)));
   }
 
   useEffect(() => {
-    refreshList();
-    setReady(true);
+    void refreshList().finally(() => setReady(true));
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
@@ -62,9 +63,10 @@ export default function SettingsPage() {
   }
 
   function handleUnblock(id: string, name: string) {
-    removeBlockedId(id);
-    refreshList();
-    showToast(`Unblocked ${name}.`);
+    unblockPerson(id)
+      .then(() => refreshList())
+      .then(() => showToast(`Unblocked ${name}.`))
+      .catch((e: Error) => showToast(e.message));
   }
 
   return (
@@ -89,7 +91,7 @@ export default function SettingsPage() {
           <div className="min-w-0">
             <h2 className="font-medium text-ink-900">Blocked list</h2>
             <p className="mt-1 text-sm leading-relaxed text-ink-500">
-              People you’ve blocked won’t show up in your feed or search on this device. Unblock anytime.
+              People you’ve blocked won’t show up in your feed or search, and you won’t show up in theirs. They aren’t told. Unblock anytime.
             </p>
           </div>
         </div>
@@ -113,7 +115,7 @@ export default function SettingsPage() {
                   <Avatar name={person.name} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ink-900">{person.name}</p>
-                    <p className="truncate text-xs text-ink-400">@{person.handle}</p>
+                    {person.handle && <p className="truncate text-xs text-ink-400">@{person.handle}</p>}
                   </div>
                   <button
                     type="button"
