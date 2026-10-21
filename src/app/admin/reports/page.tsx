@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/adminGate";
+import { ConfirmSubmit } from "./ConfirmSubmit";
 import { removeMoment, resolveFlaggedAccount, restoreMoment } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -117,9 +118,12 @@ export default async function AdminReportsPage() {
                     </form>
                     <form action={removeMoment}>
                       <input type="hidden" name="momentId" value={r.moment_id} />
-                      <button type="submit" className={`${pill} text-ink-500 hover:bg-cream-100 hover:text-ink-800`}>
+                      <ConfirmSubmit
+                        message="Remove this Moment and its photo for good?"
+                        className={`${pill} text-ink-500 hover:bg-cream-100 hover:text-ink-800`}
+                      >
                         Remove
-                      </button>
+                      </ConfirmSubmit>
                     </form>
                   </div>
                 )}
