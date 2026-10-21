@@ -14,7 +14,8 @@ export async function verifyPassword(userId: string, email: string, password: st
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await probe.auth.signInWithPassword({ email, password });
-  if (data.session) await probe.auth.signOut().catch(() => undefined);
+  // Local scope: drop only this throwaway session, never the user's other sessions.
+  if (data.session) await probe.auth.signOut({ scope: "local" }).catch(() => undefined);
   return !error && data.user?.id === userId;
 }
 
