@@ -26,8 +26,18 @@ async function resolveReports(admin: SupabaseClient, momentId: string) {
     .from("reports")
     .update({ status: "resolved" })
     .eq("moment_id", momentId)
+    .is("comment_id", null)
     .eq("status", "open");
   logDbError("resolve reports", error, { momentId });
+}
+
+async function resolveCommentReports(admin: SupabaseClient, commentId: string) {
+  const { error } = await admin
+    .from("reports")
+    .update({ status: "resolved" })
+    .eq("comment_id", commentId)
+    .eq("status", "open");
+  logDbError("resolve comment reports", error, { commentId });
 }
 
 /** Restore: un-hide the Moment and resolve its open reports. */
@@ -79,5 +89,37 @@ export async function resolveFlaggedAccount(form: FormData) {
   logDbError("resolve flag", error, { userId });
   if (error) return;
   await audit(admin, adminId, "resolve_flag", userId);
+  revalidatePath("/admin/reports");
+}
+
+/** Restore a comment: clear its hidden flag and resolve its open reports. */
+export async function restoreComment(form: FormData) {
+  const session = await requireAdminSession();
+  const id = idFrom(form, "commentId");
+  if (!session || !id) return;
+  const { admin, adminId } = session;
+  const { error } = await admin.from("comments").update({ hidden_pending_review: false }).eq("id", id);
+  logDbError("restore comment", error, { commentId: id });
+  if (error) return;
+  await resolveCommentReports(admin, id);
+  await audit(admin, adminId, "restore_comment", id);
+  revalidatePath("/admin/reports");
+}
+
+/** Remove a comment: soft-delete only that comment (replies stay under a placeholder). */
+export async function removeComment(form: FormData) {
+  const session = await requireAdminSession();
+  const id = idFrom(form, "commentId");
+  if (!session || !id) return;
+  const { admin, adminId } = session;
+  const { error } = await admin
+    .from("comments")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null);
+  logDbError("remove comment", error, { commentId: id });
+  if (error) return;
+  await resolveCommentReports(admin, id);
+  await audit(admin, adminId, "remove_comment", id);
   revalidatePath("/admin/reports");
 }

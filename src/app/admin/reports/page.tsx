@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/adminGate";
 import { ConfirmSubmit } from "./ConfirmSubmit";
-import { removeMoment, resolveFlaggedAccount, restoreMoment } from "./actions";
+import { removeComment, removeMoment, resolveFlaggedAccount, restoreComment, restoreMoment } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Open reports", robots: { index: false } };
@@ -15,6 +15,8 @@ type ReportRow = {
   needs_account_review: boolean;
   created_at: string;
   moment: { body: string | null; author_id: string | null; hidden_pending_review: boolean | null } | null;
+  comment_id: string | null;
+  comment: { body: string; author_id: string; hidden_pending_review: boolean; deleted_at: string | null } | null;
 };
 
 type FlaggedRow = {
@@ -36,7 +38,7 @@ export default async function AdminReportsPage() {
     admin
       .from("reports")
       .select(
-        "id, moment_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review)",
+        "id, moment_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
       )
       .eq("status", "open")
       .order("needs_account_review", { ascending: false })
@@ -98,17 +100,48 @@ export default async function AdminReportsPage() {
                       Account review
                     </span>
                   )}
-                  {r.moment?.hidden_pending_review && (
+                  {r.comment_id && (
+                    <span className="rounded-full bg-cream-100 px-2 py-0.5 text-xs text-ink-600">Comment</span>
+                  )}
+                  {(r.comment_id ? r.comment?.hidden_pending_review : r.moment?.hidden_pending_review) && (
                     <span className="rounded-full bg-cream-200 px-2 py-0.5 text-xs text-ink-600">Hidden pending review</span>
                   )}
                   <span className="ml-auto text-xs text-ink-400">{when(r.created_at)}</span>
                 </div>
-                {r.moment?.body && <p className="mt-2 text-sm text-ink-700">“{r.moment.body}”</p>}
+                {r.comment_id ? (
+                  <>
+                    <p className="mt-2 text-sm text-ink-700">
+                      “{r.comment?.body ?? "(comment unavailable)"}”{r.comment?.deleted_at && " · removed"}
+                    </p>
+                    {r.moment?.body && <p className="mt-1 text-xs text-ink-400">On: “{r.moment.body}”</p>}
+                  </>
+                ) : (
+                  r.moment?.body && <p className="mt-2 text-sm text-ink-700">“{r.moment.body}”</p>
+                )}
                 {r.note && <p className="mt-1 text-sm text-ink-500">Note: {r.note}</p>}
                 <p className="mt-2 font-mono text-[11px] text-ink-400">
+                  {r.comment_id && <>comment {r.comment_id} · comment author {r.comment?.author_id ?? "—"} · </>}
                   moment {r.moment_id ?? "—"} · author {r.moment?.author_id ?? "—"} · reporter {r.reporter_id ?? "—"}
                 </p>
-                {r.moment_id && (
+                {r.comment_id ? (
+                  <div className="mt-3 flex gap-2">
+                    <form action={restoreComment}>
+                      <input type="hidden" name="commentId" value={r.comment_id} />
+                      <button type="submit" className={`${pill} bg-cream-100 text-ink-700 hover:bg-cream-200`}>
+                        Restore
+                      </button>
+                    </form>
+                    <form action={removeComment}>
+                      <input type="hidden" name="commentId" value={r.comment_id} />
+                      <ConfirmSubmit
+                        message="Remove this comment? Replies stay, under “This comment was removed.”"
+                        className={`${pill} text-ink-500 hover:bg-cream-100 hover:text-ink-800`}
+                      >
+                        Remove
+                      </ConfirmSubmit>
+                    </form>
+                  </div>
+                ) : r.moment_id && (
                   <div className="mt-3 flex gap-2">
                     <form action={restoreMoment}>
                       <input type="hidden" name="momentId" value={r.moment_id} />
