@@ -181,8 +181,10 @@ export default function HomePage() {
   // Re-read localStorage block list each render (free-tier, this device).
   const blockedIds = new Set(getBlockedIds());
   // Reported Moments disappear right away for the reporter (this device).
+  // The device-only block list only applies in demo mode; with real keys the server
+  // (can_see_moment) already drops anything across a block.
   const visibleFeed = feed.filter(
-    (post) => !blockedIds.has(post.authorId) && !reportedIds.includes(post.id),
+    (post) => (mode === "supabase" || !blockedIds.has(post.authorId)) && !reportedIds.includes(post.id),
   );
   const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
   const suggestions = people
@@ -236,9 +238,8 @@ export default function HomePage() {
           if (!page) return;
           setFeed((prev) => [
             ...prev,
-            ...page.moments.filter(
-              (m) => !prev.some((p) => p.id === m.id && !p.fromYourPeople),
-            ),
+            // Skip anything already loaded or pinned under "From your people".
+            ...page.moments.filter((m) => !m.fromYourPeople && !prev.some((p) => p.id === m.id)),
           ]);
           setNext(page.next);
         })
@@ -358,11 +359,14 @@ export default function HomePage() {
 
   // "From your people" first (first page only), then the rest, newest first, without repeats.
   const pinned = visibleFeed.filter((p) => p.fromYourPeople);
-  const rest = visibleFeed.filter(
-    (p, i, list) =>
-      !p.fromYourPeople &&
-      list.findIndex((q) => !q.fromYourPeople && q.id === p.id) === i,
-  );
+  // Nothing shows twice: skip ids pinned above, and repeats within the list.
+  const pinnedIds = new Set(pinned.map((p) => p.id));
+  const listed = new Set<string>();
+  const rest = visibleFeed.filter((p) => {
+    if (p.fromYourPeople || pinnedIds.has(p.id) || listed.has(p.id)) return false;
+    listed.add(p.id);
+    return true;
+  });
 
   function renderCard(post: Post, slot: "pin" | "list") {
     return (
