@@ -11,6 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { people as samplePeople, type Person } from "@/data/seed";
 import { listBlockedIds } from "@/lib/blocks";
 import { follow, listFollowingIds, listPeople, unfollow } from "@/lib/follows";
+import { listFriends, listOutgoing, sendKnock } from "@/lib/knocks";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
@@ -24,6 +25,36 @@ function PeoplePageContent() {
   const [people, setPeople] = useState<Person[]>(samplePeople);
   const [blockedList, setBlockedList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // People you've knocked on (or are already friends with): the Knock button shows "Knocked".
+  const [knocked, setKnocked] = useState<Record<string, boolean>>({});
+  const [friendIds, setFriendIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    Promise.all([listOutgoing(user.id), listFriends(user.id)])
+      .then(([out, fr]) => {
+        if (cancelled) return;
+        setKnocked(Object.fromEntries(out.map((k) => [k.person.id, true])));
+        setFriendIds(Object.fromEntries(fr.map((p) => [p.id, true])));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function knock(p: Person) {
+    if (!user || knocked[p.id]) return;
+    setKnocked((prev) => ({ ...prev, [p.id]: true }));
+    setError(null);
+    try {
+      await sendKnock(user.id, { id: p.id, name: p.name, handle: p.handle });
+    } catch (e) {
+      setKnocked((prev) => ({ ...prev, [p.id]: false }));
+      setError((e as Error).message);
+    }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -155,6 +186,17 @@ function PeoplePageContent() {
                 >
                   {isFollowing ? "Following" : "Follow"}
                 </Button>
+                {!friendIds[p.id] && (
+                  <Button
+                    variant="secondary"
+                    className="!px-4 !py-2 text-xs"
+                    disabled={!!knocked[p.id]}
+                    onClick={() => void knock(p)}
+                    aria-label={knocked[p.id] ? `Knocked on ${p.name}’s door` : `Knock on ${p.name}’s door`}
+                  >
+                    {knocked[p.id] ? "Knocked" : "Knock"}
+                  </Button>
+                )}
               </div>
             );
           })}
