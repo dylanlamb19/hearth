@@ -10,6 +10,8 @@ export async function fileReport(input: { momentId?: string; reason: string; not
   const sb = getSupabaseBrowserClient();
   if (!sb) return;
   const momentId = input.momentId && /^[0-9a-f-]{36}$/i.test(input.momentId) ? input.momentId : null;
+  // Sample/seed posts aren't in the database; the local hide is all that applies.
+  if (!momentId) return;
   // No .select(): reports aren't readable, and insert returns nothing by default.
   const { error } = await sb.from("reports").insert({ moment_id: momentId, reason: input.reason, note: input.note || null });
   // 23505: you already reported this Moment; that's fine.

@@ -17,14 +17,26 @@ export async function POST(request: NextRequest) {
   const id = body?.id;
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "Unknown Moment." }, { status: 400 });
 
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+
   const { data: path, error } = await supabase.rpc("delete_moment", { moment_id: id });
   if (error) return NextResponse.json({ error: "Couldn’t delete that Moment." }, { status: 404 });
 
-  if (typeof path === "string" && path) {
+  if (typeof path === "string" && path && !path.startsWith(`${userId}/`)) {
+    // Never remove a file outside the caller's own folder.
+    console.error("[hearth] refusing to remove file outside owner folder", { path, userId });
+  } else if (typeof path === "string" && path) {
     const admin = getSupabaseAdminClient();
     // Best effort: reads are already refused for deleted Moments.
     // Orphaned uploads (never attached) are swept by a follow-up: forge/chore-media-orphan-cleanup.
-    await admin?.storage.from(MEDIA_BUCKET).remove([path]);
+    if (!admin) {
+      console.error("[hearth] file removal skipped: no admin client", { path });
+    } else {
+      const { error: removeError } = await admin.storage.from(MEDIA_BUCKET).remove([path]);
+      if (removeError) console.error("[hearth] file removal failed", { path, error: removeError.message });
+    }
   }
   return NextResponse.json({ ok: true });
 }

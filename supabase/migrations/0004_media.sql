@@ -135,14 +135,15 @@ create policy "moments readable when public or own"
       or (visibility = 'public' and not hidden_pending_review)
     )
   );
--- TODO(friends): friends-visibility clause, also excluding hidden_pending_review.
+-- TODO(friends): when the friends clause lands it MUST keep excluding hidden_pending_review
+-- (and deleted_at) for everyone but the author, exactly like the public clause above.
 
 -- Reports. Anyone signed in can file one (once per Moment); nobody can read them through the
 -- API. Admins review them at /admin/reports (server-side, admin client).
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid default auth.uid() references auth.users (id) on delete set null,
-  moment_id uuid references public.moments (id) on delete set null,
+  moment_id uuid not null references public.moments (id) on delete cascade,
   reason text not null check (char_length(reason) between 1 and 80),
   note text check (note is null or char_length(note) <= 280),
   status text not null default 'open' check (status in ('open', 'resolved')),
@@ -152,6 +153,7 @@ create table if not exists public.reports (
 );
 
 alter table public.reports add column if not exists status text not null default 'open';
+alter table public.reports alter column moment_id set not null;
 
 -- "Someone under 13" flags the account for review.
 create or replace function public.flag_report_for_review()
@@ -171,17 +173,49 @@ create trigger flag_report_for_review
   before insert on public.reports
   for each row execute function public.flag_report_for_review();
 
--- 3 or more different reporters: hide the Moment for everyone but its author until reviewed.
+-- Accounts flagged by "Someone under 13" reports. Not readable or writable by clients
+-- (no grants, no policies); filled by the report trigger, reviewed at /admin/reports.
+create table if not exists public.flagged_accounts (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  reason text not null,
+  first_flagged_at timestamptz not null default now(),
+  status text not null default 'open' check (status in ('open', 'resolved'))
+);
+alter table public.flagged_accounts enable row level security;
+revoke all on public.flagged_accounts from anon, authenticated;
+
+-- After each report:
+--  * "Someone under 13" flags the Moment author's account.
+--  * 3 or more qualifying reporters hide the Moment for everyone but its author until reviewed.
+--    A reporter qualifies if their account is at least 3 days old (anti-brigading).
+--    TODO(blocks): blocking is still client-only (localStorage). Once blocks persist in a
+--    table, also skip reporters the Moment's author has blocked.
 create or replace function public.hide_after_reports()
 returns trigger
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  author uuid;
 begin
-  if new.moment_id is not null and (
-    select count(distinct reporter_id) from public.reports
-     where moment_id = new.moment_id and status = 'open'
+  select m.author_id into author from public.moments m where m.id = new.moment_id;
+
+  if new.needs_account_review and author is not null then
+    insert into public.flagged_accounts (user_id, reason)
+    values (author, new.reason)
+    on conflict (user_id) do update
+      set status = 'open'
+      where public.flagged_accounts.status = 'resolved';
+  end if;
+
+  if (
+    select count(distinct r.reporter_id)
+      from public.reports r
+      join auth.users u on u.id = r.reporter_id
+     where r.moment_id = new.moment_id
+       and r.status = 'open'
+       and u.created_at <= now() - interval '3 days'
   ) >= 3 then
     update public.moments set hidden_pending_review = true where id = new.moment_id;
   end if;
@@ -202,5 +236,9 @@ drop policy if exists "users file their own reports" on public.reports;
 create policy "users file their own reports"
   on public.reports for insert
   to authenticated
-  with check (reporter_id = auth.uid());
+  with check (
+    reporter_id = auth.uid()
+    -- Only Moments you can see: this subquery runs under your own moments RLS.
+    and exists (select 1 from public.moments m where m.id = moment_id)
+  );
 -- No select policy: reports can't be read through the API, not even by the reporter.
