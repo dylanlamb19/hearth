@@ -293,9 +293,6 @@ begin
      or not exists (select 1 from public.profiles p where p.id = target) then
     raise exception 'HEARTH_REPORT_FAILED' using errcode = 'HRPT1';
   end if;
-  if exists (select 1 from public.blocks b where b.blocker_id = target and b.blocked_id = me) then
-    return;
-  end if;
   perform pg_advisory_xact_lock(hashtextextended('report_user:' || me::text, 0));
   if exists (select 1 from public.reports r
               where r.reporter_id = me and r.reported_user_id = target and r.moment_id is null) then
@@ -305,6 +302,10 @@ begin
        where r.reporter_id = me and r.reported_user_id is not null and r.moment_id is null
          and r.created_at > now() - interval '24 hours') >= 20 then
     raise exception 'HEARTH_REPORT_LIMIT' using errcode = 'HRPT2';
+  end if;
+  -- Blocked by the target: same checks as everyone above, then quietly save nothing.
+  if exists (select 1 from public.blocks b where b.blocker_id = target and b.blocked_id = me) then
+    return;
   end if;
   insert into public.reports (reporter_id, reported_user_id, reason, note)
   values (me, target, reason, nullif(trim(coalesce(note, '')), ''));
