@@ -23,7 +23,7 @@ revoke all on function public.can_see_moment(uuid) from public, anon;
 grant execute on function public.can_see_moment(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- Reactions: one per person per Moment, any of six kinds.
+-- Reactions: one per person per Moment, one of Glow's six kinds.
 -- ---------------------------------------------------------------------------
 create table if not exists public.reactions (
   moment_id uuid not null references public.moments (id) on delete cascade,
@@ -34,7 +34,7 @@ create table if not exists public.reactions (
 );
 alter table public.reactions drop constraint if exists reactions_kind_check;
 alter table public.reactions
-  add constraint reactions_kind_check check (kind in ('love', 'haha', 'wow', 'sad', 'care', 'fire'));
+  add constraint reactions_kind_check check (kind in ('love', 'warm', 'haha', 'hug', 'wow', 'sad'));
 
 alter table public.reactions enable row level security;
 revoke all on public.reactions from anon, authenticated;

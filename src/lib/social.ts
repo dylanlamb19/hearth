@@ -10,15 +10,24 @@ const UUID = /^[0-9a-f-]{36}$/i;
 const REACTIONS_KEY = "hearth_reactions";
 const COMMENTS_KEY = "hearth_comments";
 
-export const REACTION_KINDS = ["love", "haha", "wow", "sad", "care", "fire"] as const;
+// Glow's reaction set. Placeholder glyphs (plain text, no emoji set) until Glow's line icons land.
+export const REACTION_KINDS = ["love", "warm", "haha", "hug", "wow", "sad"] as const;
 export type ReactionKind = (typeof REACTION_KINDS)[number];
-export const REACTION_EMOJI: Record<ReactionKind, string> = {
-  love: "❤️",
-  haha: "😂",
-  wow: "😮",
-  sad: "😢",
-  care: "🤗",
-  fire: "🔥",
+export const REACTION_LABEL: Record<ReactionKind, string> = {
+  love: "Love",
+  warm: "Warm",
+  haha: "Haha",
+  hug: "Hug",
+  wow: "Wow",
+  sad: "Sad",
+};
+export const REACTION_GLYPH: Record<ReactionKind, string> = {
+  love: "♥",
+  warm: "☼",
+  haha: "ha",
+  hug: "◡",
+  wow: "!",
+  sad: "︵",
 };
 
 export type Reaction = { userId: string; kind: ReactionKind };

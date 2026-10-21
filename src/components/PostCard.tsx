@@ -9,7 +9,7 @@ import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
 import { useAuth } from "./AuthProvider";
 import { CommentsSection } from "./CommentsSection";
-import { listReactions, REACTION_EMOJI, REACTION_KINDS, setReaction, type Reaction, type ReactionKind } from "@/lib/social";
+import { listReactions, REACTION_GLYPH, REACTION_KINDS, REACTION_LABEL, setReaction, type Reaction, type ReactionKind } from "@/lib/social";
 
 function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
@@ -84,7 +84,7 @@ export function PostCard({
   const mine = user ? stored.find((r) => r.userId === user.id)?.kind ?? null : null;
   const reactions = [
     ...seedReactions.filter((r) => !stored.some((s) => s.userId === r.personId)),
-    ...stored.map((r) => ({ emoji: REACTION_EMOJI[r.kind], personId: r.userId })),
+    ...stored.map((r) => ({ emoji: REACTION_GLYPH[r.kind], personId: r.userId })),
   ];
   const loveCount = reactions.length;
 
@@ -261,11 +261,11 @@ export function PostCard({
             className={`inline-flex items-center gap-1.5 rounded-l-full py-1.5 pl-3 pr-1 hover:bg-cream-100 ${mine ? "text-ember-700" : ""}`}
           >
             {mine && mine !== "love" ? (
-              <span aria-hidden>{REACTION_EMOJI[mine]}</span>
+              <span aria-hidden>{REACTION_GLYPH[mine]}</span>
             ) : (
               <Heart className={`h-4 w-4 ${mine ? "fill-current" : ""}`} />
             )}{" "}
-            {mine ? mine[0].toUpperCase() + mine.slice(1) : "Love"}
+            {mine ? REACTION_LABEL[mine] : "Love"}
           </button>
           <button
             type="button"
@@ -290,12 +290,14 @@ export function PostCard({
                 <button
                   key={k}
                   type="button"
-                  aria-label={k}
+                  aria-label={REACTION_LABEL[k]}
+                  title={REACTION_LABEL[k]}
                   aria-pressed={mine === k}
                   onClick={() => void react(mine === k ? null : k)}
-                  className={`rounded-full px-1.5 py-1 text-lg hover:bg-cream-200 ${mine === k ? "bg-cream-200" : ""}`}
+                  className={`inline-flex flex-col items-center rounded-full px-2 py-1 text-ink-700 hover:bg-cream-200 ${mine === k ? "bg-cream-200" : ""}`}
                 >
-                  {REACTION_EMOJI[k]}
+                  <span aria-hidden className="text-base leading-none">{REACTION_GLYPH[k]}</span>
+                  <span className="text-[10px] leading-tight">{REACTION_LABEL[k]}</span>
                 </button>
               ))}
             </span>
