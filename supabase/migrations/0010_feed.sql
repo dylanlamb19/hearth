@@ -27,8 +27,8 @@ $$;
 revoke all on function public.are_friends(uuid, uuid) from public, anon, authenticated;
 
 -- The one audience check. Every read and write path goes through it: the moments policy,
--- get_feed, list_comments, comment and reaction policies, toggle_comment_love, reports
--- (can_report_moment / can_report_comment) and media signing.
+-- get_feed, list_comments, comment and reaction policies, toggle_comment_love and media
+-- signing. Reports use can_see_moment_ignoring_blocks (below), which only skips the block test.
 -- You can see a Moment if it isn't removed and either it's yours, or it isn't hidden pending
 -- review, there's no block either way, and you're a friend (friends or everyone) or a
 -- follower (everyone only). Missing and not-visible look the same: false.
@@ -61,13 +61,44 @@ $$;
 revoke all on function public.can_see_moment(uuid) from public, anon;
 grant execute on function public.can_see_moment(uuid) to authenticated;
 
+-- Internal, for reports only: the same audience check minus the block test. A report filed
+-- across a block is still saved (marked reporter_blocked when the author blocked the reporter,
+-- see 0009), and someone who blocked an author can still flag them as under 13. The reporter
+-- gets the same response either way. No client grants.
+create or replace function public.can_see_moment_ignoring_blocks(target uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.moments m
+     where m.id = target
+       and m.deleted_at is null
+       and (
+         m.author_id = auth.uid()
+         or (
+           not m.hidden_pending_review
+           and (
+             public.are_friends(auth.uid(), m.author_id)
+             or (m.visibility = 'everyone'
+                 and exists (select 1 from public.follows f
+                              where f.follower_id = auth.uid() and f.followee_id = m.author_id))
+           )
+         )
+       )
+  );
+$$;
+revoke all on function public.can_see_moment_ignoring_blocks(uuid) from public, anon, authenticated;
+
 drop policy if exists "moments readable when public or own" on public.moments;
 drop policy if exists "moments readable by their audience" on public.moments;
 create policy "moments readable by their audience"
   on public.moments for select to authenticated
   using (public.can_see_moment(id));
 
--- Reports: you can report what you can see (supersedes 0006).
+-- Reports: you can report what your audience allows, ignoring blocks (supersedes 0006).
 create or replace function public.can_report_moment(target uuid)
 returns boolean
 language sql
@@ -75,13 +106,15 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select public.can_see_moment(target);
+  select public.can_see_moment_ignoring_blocks(target);
 $$;
 revoke all on function public.can_report_moment(uuid) from public, anon;
 grant execute on function public.can_report_moment(uuid) to authenticated;
 
--- Comments: the comment must be live (not hidden unless yours) on a Moment you can see
--- (supersedes 0007; used by comment reports and the reply check).
+-- Comments: the comment must be live (not hidden unless yours) on a Moment your audience
+-- allows, ignoring blocks (supersedes 0007). Used by comment reports. The reply check also
+-- calls it, but it tests blocks separately with is_blocked_between, so replies still stop
+-- at a block.
 create or replace function public.can_report_comment(target uuid, parent uuid)
 returns boolean
 language sql
@@ -89,7 +122,7 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select public.can_see_moment(parent) and exists (
+  select public.can_see_moment_ignoring_blocks(parent) and exists (
     select 1 from public.comments c
      where c.id = target
        and c.moment_id = parent
