@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import { birthYearOptions, isAgeBlocked, isUnderMinAge, setAgeBlocked } from "@/lib/age";
+import { FormEvent, useState } from "react";
+import { birthYearOptions, isUnderMinAge, setAgeBlocked } from "@/lib/age";
+import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
@@ -11,11 +12,7 @@ import { useAuth } from "@/components/AuthProvider";
 export default function SignupPage() {
   const { login, updateUser } = useAuth();
   const router = useRouter();
-  const [blocked, setBlocked] = useState(false);
-  // Read after mount so the prerendered form and the client agree on first paint.
-  useEffect(() => {
-    if (isAgeBlocked()) setBlocked(true);
-  }, []);
+  const [blocked, setBlocked] = useAgeBlocked();
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,15 +46,7 @@ export default function SignupPage() {
     router.push("/welcome");
   }
 
-  if (blocked) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-cream-100 px-6 py-12 text-center">
-        <Logo />
-        <h1 className="mt-10 font-display text-3xl text-ink-900 text-balance">Hearth is for people 13 and older.</h1>
-        <p className="mt-4 max-w-sm text-ink-600">Thanks for stopping by.</p>
-      </div>
-    );
-  }
+  if (blocked) return <AgeBlockedScreen />;
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -154,12 +143,12 @@ export default function SignupPage() {
                   </option>
                 ))}
               </select>
-              <span className="mt-1.5 block text-xs text-ink-400">Only the year is kept, just to check you’re 13 or older.</span>
+              <span className="mt-1.5 block text-xs text-ink-400">We keep only the year.</span>
             </label>
             <label className="flex items-start gap-3 text-sm text-ink-600">
               <input name="terms" type="checkbox" className="mt-1 rounded border-ink-300 text-hearth focus:ring-ember-300" />
               <span>
-                By creating an account you agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and you’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
+                I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and I’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
               </span>
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}

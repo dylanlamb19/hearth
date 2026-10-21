@@ -7,11 +7,13 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
 import { needsOnboarding } from "@/lib/auth";
+import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
+  const [blocked] = useAgeBlocked();
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,6 +31,8 @@ export default function LoginPage() {
       router.push("/home");
     }
   }
+
+  if (blocked) return <AgeBlockedScreen />;
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
