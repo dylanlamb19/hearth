@@ -1,26 +1,37 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { deleteAccount } from "@/lib/supabase/deleteAccount";
+import { deleteAccount, verifyPassword } from "@/lib/supabase/deleteAccount";
 
 export const runtime = "nodejs";
 
 /**
- * Deletes the signed-in person's account, including their `<uid>/` photo folder.
- * No UI button yet (privacy page: email us until it ships); also usable by an admin handling
- * an email request by calling deleteAccount() server-side.
+ * Deletes the signed-in person's account. Body: { password, confirm: "delete" }.
+ * The password is re-checked server-side and the word "delete" must be typed.
+ * No UI button yet (privacy page: email us until it ships).
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   const supabase = await getSupabaseServerClient();
   const admin = getSupabaseAdminClient();
   if (!supabase || !admin) return NextResponse.json({ error: "Not available." }, { status: 503 });
   const { data } = await supabase.auth.getUser();
-  const userId = data.user?.id;
-  if (!userId) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+  const user = data.user;
+  if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+
+  const body = (await request.json().catch(() => null)) as { password?: unknown; confirm?: unknown } | null;
+  const password = typeof body?.password === "string" ? body.password : "";
+  const confirm = typeof body?.confirm === "string" ? body.confirm.trim().toLowerCase() : "";
+  if (confirm !== "delete") {
+    return NextResponse.json({ error: "Type “delete” to confirm." }, { status: 400 });
+  }
+  if (!(await verifyPassword(user.id, user.email ?? "", password))) {
+    return NextResponse.json({ error: "That password isn’t right." }, { status: 403 });
+  }
+
   try {
-    await deleteAccount(admin, userId);
+    await deleteAccount(admin, user.id);
   } catch (e) {
-    console.error("[hearth] account deletion failed", { userId, error: (e as Error).message });
+    console.error("[hearth] account deletion failed", { userId: user.id, error: (e as Error).message });
     return NextResponse.json({ error: "Couldn’t delete your account. Email us and we’ll do it." }, { status: 500 });
   }
   await supabase.auth.signOut();
