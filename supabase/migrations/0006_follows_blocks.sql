@@ -82,7 +82,7 @@ create index if not exists follows_followee_idx on public.follows (followee_id);
 alter table public.follows enable row level security;
 revoke all on public.follows from anon, authenticated;
 grant select (follower_id, followee_id, created_at) on public.follows to authenticated;
-grant insert (followee_id) on public.follows to authenticated;
+-- No direct INSERT: following goes through follow_user() below.
 grant delete on public.follows to authenticated;
 
 -- Any signed-in user can read follows, minus rows involving someone they're blocked with.
@@ -94,14 +94,8 @@ create policy "follows readable by signed-in users"
     and not public.is_blocked_with(followee_id)
   );
 
--- Neither side of a block can follow the other.
+-- No insert policy: clients can't insert follows directly.
 drop policy if exists "users follow as themselves" on public.follows;
-create policy "users follow as themselves"
-  on public.follows for insert to authenticated
-  with check (
-    follower_id = auth.uid()
-    and not public.is_blocked_with(followee_id)
-  );
 
 drop policy if exists "users unfollow own follows" on public.follows;
 create policy "users unfollow own follows"
@@ -145,6 +139,36 @@ drop trigger if exists cap_follow_rate on public.follows;
 create trigger cap_follow_rate
   before insert on public.follows
   for each row execute function public.cap_follow_rate();
+
+-- The only way to follow someone. Missing account, self, or a block in either direction all
+-- raise the same error (HFOL2), so a follow attempt can't reveal a block. Already following is
+-- a no-op. The insert fires cap_follow_rate, which enforces the daily cap and logs the event.
+create or replace function public.follow_user(target uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  me uuid := auth.uid();
+begin
+  if me is null then
+    raise exception 'Not signed in' using errcode = '28000';
+  end if;
+  if target is null
+     or target = me
+     or not exists (select 1 from public.profiles p where p.id = target)
+     or public.is_blocked_between(me, target) then
+    raise exception 'HEARTH_FOLLOW_FAILED' using errcode = 'HFOL2';
+  end if;
+  if exists (select 1 from public.follows f where f.follower_id = me and f.followee_id = target) then
+    return;
+  end if;
+  insert into public.follows (follower_id, followee_id) values (me, target);
+end;
+$$;
+revoke all on function public.follow_user(uuid) from public, anon;
+grant execute on function public.follow_user(uuid) to authenticated;
 
 -- Blocking removes follows in both directions.
 create or replace function public.unfollow_on_block()

@@ -47,7 +47,8 @@ export async function follow(targetId: string): Promise<void> {
     if (!sb) writeDemo([...readDemo(), targetId]);
     return;
   }
-  const { error } = await sb.from("follows").insert({ followee_id: targetId });
+  // follow_user() is the only way in (no direct INSERT on follows).
+  const { error } = await sb.rpc("follow_user", { target: targetId });
   if (!error || error.code === "23505") return;
   if (error.message.includes(FOLLOW_LIMIT_ERROR)) {
     throw new Error("You’ve followed a lot of people today. Try again tomorrow.");
