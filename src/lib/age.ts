@@ -1,6 +1,8 @@
 /** Age gate: we keep only the birth year, plus a permanent block flag for under-13s. */
 export const AGE_BLOCK_KEY = "hearth_age_blocked";
 export const MIN_AGE = 13;
+/** Message raised by the signup trigger in 0002_age_gate.sql (errcode HAGE1). */
+export const AGE_BLOCK_ERROR = "HEARTH_AGE_BLOCKED";
 
 /**
  * With only a birth year we can't tell a 12-year-old from a 13-year-old in the

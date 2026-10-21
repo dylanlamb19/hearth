@@ -9,9 +9,10 @@ export type ProfileRow = {
   photo_url: string | null;
   interests: string[] | null;
   onboarding_completed_at: string | null;
-  birth_year: number | null;
   created_at: string;
 };
+
+export const PROFILE_COLUMNS = "id, name, handle, bio, photo_url, interests, onboarding_completed_at, created_at";
 
 export function profileToSessionUser(authUser: User, row: ProfileRow | null): SessionUser {
   const email = authUser.email ?? "";
@@ -24,7 +25,6 @@ export function profileToSessionUser(authUser: User, row: ProfileRow | null): Se
     photoUrl: row?.photo_url ?? undefined,
     interests: row?.interests ?? undefined,
     onboardingCompletedAt: row?.onboarding_completed_at ?? undefined,
-    birthYear: row?.birth_year ?? undefined,
   };
 }
 
@@ -40,13 +40,18 @@ export function sessionPatchToRow(patch: Partial<SessionUser>): Partial<ProfileR
 }
 
 export async function fetchProfile(sb: SupabaseClient, id: string): Promise<ProfileRow | null> {
-  const { data } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
+  // birth_year and terms_accepted_at aren't readable through the API (0001 column grants).
+  const { data } = await sb.from("profiles").select(PROFILE_COLUMNS).eq("id", id).maybeSingle();
   return (data as ProfileRow | null) ?? null;
 }
 
-/** True when another profile already owns this handle (case-insensitive). */
+/**
+ * True when another profile already owns this handle. Handles are stored lowercase
+ * (profiles_handle_format), so an exact match on the lowercased value is case-insensitive
+ * without ilike wildcards. Throws when the check itself fails, so it's never reported as free.
+ */
 export async function isHandleTakenInDb(sb: SupabaseClient, handle: string, selfId?: string): Promise<boolean> {
-  const { data, error } = await sb.from("profiles").select("id").ilike("handle", handle).limit(1);
-  if (error || !data || data.length === 0) return false;
-  return data[0].id !== selfId;
+  const { data, error } = await sb.from("profiles").select("id").eq("handle", handle.toLowerCase()).limit(1);
+  if (error || !data) throw new Error(error?.message || "Handle check failed");
+  return data.length > 0 && data[0].id !== selfId;
 }
