@@ -20,6 +20,10 @@ export type Post = {
   /** Author display info for stored Moments whose author isn't in the seed. */
   authorName?: string;
   authorHandle?: string;
+  /** Video URL (signed in Supabase mode, a local object URL in the demo). */
+  video?: string;
+  /** Storage path of the attached media, so delete can remove it. */
+  mediaPath?: string;
 };
 
 export type PostReaction = {

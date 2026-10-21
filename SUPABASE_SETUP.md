@@ -12,6 +12,7 @@ Until these steps are done, Hearth runs in demo mode: only `ember@hearth.demo` c
 2. Paste in everything from `supabase/migrations/0001_profiles.sql` and click **Run**. Its column grants keep `birth_year` and `terms_accepted_at` private: the app can't read them through the API.
 3. You should see "Success. No rows returned." This creates the `profiles` table, its privacy rules, and the trigger that adds a profile for each new signup.
 4. Open another **New query**, paste everything from `supabase/migrations/0002_age_gate.sql`, and click **Run**. This adds `birth_year` to profiles and refuses any signup from someone under 13 (the server-side half of the signup age gate).
+5. Run `supabase/migrations/0003_moments.sql` (Moments), then `0004_media.sql`. The second creates the private `moment-media` bucket (50 MB cap, JPEG/MP4/WebM/MOV only) and its policies.
 
 ## 3. Auth settings
 1. **Authentication → URL Configuration**: set **Site URL** to `https://hearthsocial.grok.me`. Under **Redirect URLs**, add `https://hearthsocial.grok.me/**` and `http://localhost:3000/**`.
@@ -23,7 +24,8 @@ Until these steps are done, Hearth runs in demo mode: only `ember@hearth.demo` c
 2. In Vercel, open the hearth project → **Settings → Environment Variables** and add both for Production, Preview and Development:
    - `NEXT_PUBLIC_SUPABASE_URL` = the Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = the anon key
-3. **Redeploy** the latest Production deployment. These keys are read at build time, so a redeploy is required.
+3. For photo and video uploads, also add `SUPABASE_SERVICE_ROLE_KEY` (the **service_role** key) — **without** the `NEXT_PUBLIC_` prefix, so it stays on the server. It's used only by `/api/media` to write to the private bucket. Never put it in a `NEXT_PUBLIC_` variable.
+4. **Redeploy** the latest Production deployment. These keys are read at build time, so a redeploy is required.
 
 ## 5. Check it
 - Sign up with a new email at `/signup`, finish `/welcome`, refresh, then sign in on another device. You should still be there.
