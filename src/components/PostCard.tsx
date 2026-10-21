@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Heart, MessageCircle, Share2, Bookmark, Globe2, Users, MoreHorizontal } from "lucide-react";
 import { Post, personById, reactionsForPost } from "@/data/seed";
@@ -8,6 +8,8 @@ import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
 import { useAuth } from "./AuthProvider";
+import { CommentsSection } from "./CommentsSection";
+import { listLoves, setLove } from "@/lib/social";
 
 function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
@@ -33,6 +35,24 @@ export function PostCard({
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState(post.body);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.comments);
+  const [lovedBy, setLovedBy] = useState<string[]>([]);
+  // Stored Moments show the real count; sample posts keep their sample count plus local comments.
+  const onCommentCount = useCallback(
+    (n: number) => setCommentCount(/^[0-9a-f-]{36}$/i.test(post.id) ? n : post.comments + n),
+    [post.id, post.comments],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    listLoves(post.id, user?.id)
+      .then((ids) => !cancelled && setLovedBy(ids))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, user?.id]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seedAuthor = personById(post.authorId);
   const author =
@@ -59,8 +79,25 @@ export function PostCard({
 
   if (!author) return null;
 
-  const reactions = reactionsForPost(post.id);
+  const seedReactions = reactionsForPost(post.id);
+  const iLove = Boolean(user && lovedBy.includes(user.id));
+  const reactions = [
+    ...seedReactions,
+    ...lovedBy.filter((id) => !seedReactions.some((r) => r.personId === id)).map((personId) => ({ emoji: "❤️", personId })),
+  ];
   const loveCount = reactions.length;
+
+  async function toggleLove() {
+    if (!user) return;
+    const next = !iLove;
+    setLovedBy((prev) => (next ? [...prev, user.id] : prev.filter((id) => id !== user.id)));
+    try {
+      await setLove(post.id, next);
+    } catch (e) {
+      setLovedBy((prev) => (next ? prev.filter((id) => id !== user.id) : [...prev, user.id]));
+      showToast((e as Error).message);
+    }
+  }
 
   function showToast(message: string) {
     setToast(message);
@@ -212,16 +249,31 @@ export function PostCard({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-1 text-sm text-ink-500">
+        <span className="inline-flex items-center">
+          <button
+            type="button"
+            aria-pressed={iLove}
+            onClick={() => void toggleLove()}
+            className={`inline-flex items-center gap-1.5 rounded-l-full py-1.5 pl-3 pr-1 hover:bg-cream-100 ${iLove ? "text-ember-700" : ""}`}
+          >
+            <Heart className={`h-4 w-4 ${iLove ? "fill-current" : ""}`} /> Love
+          </button>
+          <button
+            type="button"
+            aria-label={`View ${loveCount} reactions`}
+            onClick={() => setReactionsOpen(true)}
+            className="rounded-r-full py-1.5 pl-1 pr-3 hover:bg-cream-100"
+          >
+            · {loveCount}
+          </button>
+        </span>
         <button
           type="button"
-          aria-label={`View ${loveCount} reactions`}
-          onClick={() => setReactionsOpen(true)}
+          aria-expanded={commentsOpen}
+          onClick={() => setCommentsOpen((v) => !v)}
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
         >
-          <Heart className="h-4 w-4" /> Love · {loveCount}
-        </button>
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <MessageCircle className="h-4 w-4" /> Comment · {post.comments}
+          <MessageCircle className="h-4 w-4" /> Comment · {commentCount}
         </button>
         <button
           type="button"
@@ -234,6 +286,8 @@ export function PostCard({
           <Bookmark className="h-4 w-4" /> Save
         </button>
       </div>
+
+      {commentsOpen && <CommentsSection momentId={post.id} momentAuthorId={post.authorId} onCount={onCommentCount} />}
 
       <ReactionsSheet
         open={reactionsOpen}
