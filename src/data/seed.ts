@@ -17,6 +17,9 @@ export type Post = {
   loves: number;
   comments: number;
   privacy: "friends" | "public";
+  /** Author display info for stored Moments whose author isn't in the seed. */
+  authorName?: string;
+  authorHandle?: string;
 };
 
 export type PostReaction = {
