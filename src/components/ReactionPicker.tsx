@@ -123,7 +123,7 @@ export function ReactionPicker({
         onKeyDown={onTriggerKey}
         className={cn(
           "inline-flex select-none items-center gap-1.5 rounded-full px-3 py-1.5 transition",
-          mine ? "bg-ember-100 text-amber-600" : "text-ink-500 hover:bg-cream-100",
+          mine ? "bg-ember-100 text-ember-600" : "text-ink-500 hover:bg-cream-100",
         )}
       >
         <ReactionIcon kind={mine ?? "love"} className="h-4 w-4" />
@@ -150,7 +150,7 @@ export function ReactionPicker({
               onKeyDown={(e) => onItemKey(e, i)}
               className={cn(
                 "group relative rounded-full p-1 transition-transform duration-150 hover:-translate-y-0.5 focus-visible:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember-300",
-                mine === kind ? "text-amber-600" : "text-ink-500 hover:text-ink-800",
+                mine === kind ? "text-ember-600" : "text-ink-500 hover:text-ink-800",
               )}
             >
               <ReactionIcon kind={kind} className="h-7 w-7" />

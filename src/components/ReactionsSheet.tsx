@@ -83,7 +83,7 @@ export function ReactionsSheet({
             groups.map(([kind, list]) => (
               <div key={kind} className="mb-2">
                 <p className="flex items-center px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-                  <ReactionIcon kind={kind} className="mr-1.5 h-4 w-4 text-amber-600" />
+                  <ReactionIcon kind={kind} className="mr-1.5 h-4 w-4 text-ember-600" />
                   {REACTION_LABEL[kind]} · {list.length}
                 </p>
                 <ul>
@@ -102,7 +102,7 @@ export function ReactionsSheet({
             <>
               <p className="px-4 py-2 text-xs font-medium text-ink-400">
                 <span className="inline-flex items-center">
-                  <ReactionIcon kind={groups[0][0]} className="mr-1.5 h-4 w-4 text-amber-600" />
+                  <ReactionIcon kind={groups[0][0]} className="mr-1.5 h-4 w-4 text-ember-600" />
                   {REACTION_LABEL[groups[0][0]]} · {groups[0][1].length}
                 </span>
               </p>
@@ -141,7 +141,7 @@ function ReactorRow({
         {person.handle && <p className="truncate text-xs text-ink-400">@{person.handle}</p>}
       </div>
       {showEmoji && (
-        <ReactionIcon kind={kind} className="h-5 w-5 text-amber-600" />
+        <ReactionIcon kind={kind} className="h-5 w-5 text-ember-600" />
       )}
     </li>
   );

@@ -273,7 +273,7 @@ export function PostCard({
         >
           <span className="flex -space-x-1" aria-hidden>
             {topKinds.map((k) => (
-              <span key={k} className="grid h-5 w-5 place-items-center rounded-full bg-ember-100 text-amber-600 ring-2 ring-white">
+              <span key={k} className="grid h-5 w-5 place-items-center rounded-full bg-ember-100 text-ember-600 ring-2 ring-white">
                 <ReactionIcon kind={k} className="h-4 w-4" />
               </span>
             ))}
