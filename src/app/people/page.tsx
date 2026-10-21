@@ -8,8 +8,9 @@ import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/components/AuthProvider";
-import { people } from "@/data/seed";
-import { getBlockedIds } from "@/lib/blocked";
+import { people as samplePeople, type Person } from "@/data/seed";
+import { listBlockedIds } from "@/lib/blocks";
+import { follow, listFollowingIds, listPeople, unfollow } from "@/lib/follows";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
@@ -20,6 +21,38 @@ function PeoplePageContent() {
   const [query, setQuery] = useState("");
   const [interest, setInterest] = useState<string | null>(null);
   const [following, setFollowing] = useState<Record<string, boolean>>({});
+  const [people, setPeople] = useState<Person[]>(samplePeople);
+  const [blockedList, setBlockedList] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    Promise.all([listPeople(), listFollowingIds(user.id, user.followingIds ?? []), listBlockedIds()])
+      .then(([roster, followingIds, blocked]) => {
+        if (cancelled) return;
+        setPeople(roster);
+        setFollowing(Object.fromEntries(followingIds.map((id) => [id, true])));
+        setBlockedList(blocked);
+      })
+      .catch(() => !cancelled && setError("Couldn’t load people right now."));
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function toggleFollow(id: string) {
+    const was = !!following[id];
+    setFollowing((prev) => ({ ...prev, [id]: !was }));
+    setError(null);
+    try {
+      await (was ? unfollow(id) : follow(id));
+    } catch (e) {
+      // Roll back only this person.
+      setFollowing((prev) => ({ ...prev, [id]: was }));
+      setError((e as Error).message);
+    }
+  }
 
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
@@ -32,8 +65,7 @@ function PeoplePageContent() {
     return [...DEFAULT_INTERESTS];
   }, [user?.interests]);
 
-  // Re-read block list each render so unblock in Settings is reflected on return.
-  const blockedIds = new Set(getBlockedIds());
+  const blockedIds = useMemo(() => new Set(blockedList), [blockedList]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,9 +84,7 @@ function PeoplePageContent() {
         if (!interest) return true;
         return p.bio.toLowerCase().includes(interest.toLowerCase());
       });
-    // blockedIds rebuilt each render; serialize for stable memo deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional re-read via blockedKey
-  }, [query, interest, user?.id, [...blockedIds].sort().join(",")]);
+  }, [people, query, interest, user?.id, blockedIds]);
 
   return (
     <AppShell>
@@ -95,6 +125,8 @@ function PeoplePageContent() {
         })}
       </div>
 
+      {error && <p className="mb-4 text-sm text-ember-700">{error}</p>}
+
       {results.length === 0 ? (
         <EmptyState
           icon={<UserRound className="h-10 w-10" />}
@@ -119,12 +151,7 @@ function PeoplePageContent() {
                 <Button
                   variant={isFollowing ? "secondary" : "primary"}
                   className="!px-4 !py-2 text-xs"
-                  onClick={() =>
-                    setFollowing((prev) => ({
-                      ...prev,
-                      [p.id]: !prev[p.id],
-                    }))
-                  }
+                  onClick={() => void toggleFollow(p.id)}
                 >
                   {isFollowing ? "Following" : "Follow"}
                 </Button>
