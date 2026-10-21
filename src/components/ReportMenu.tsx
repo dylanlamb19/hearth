@@ -5,7 +5,7 @@ import { Flag, Ban, MoreHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "./Button";
 import { blockPerson } from "@/lib/blocks";
 import { addReportedId } from "@/lib/reported";
-import { fileReport } from "@/lib/reports";
+import { fileReport, reportUser } from "@/lib/reports";
 
 const REPORT_REASONS = [
   "Nudity or sexual content",
@@ -33,6 +33,8 @@ export function ReportMenu({
   onReported,
   onDelete,
   onBlocked,
+  reportPerson = false,
+  extraItems,
 }: {
   subject?: string;
   /** Stable id persisted to localStorage `hearth_blocked` on block. */
@@ -46,6 +48,10 @@ export function ReportMenu({
   onDelete?: () => void;
   /** Called after a successful block (e.g. to drop a knock or friend from a list). */
   onBlocked?: (id: string) => void;
+  /** Report the person (subjectId) itself via report_user, instead of a Moment/comment. */
+  reportPerson?: boolean;
+  /** Extra entries shown first (e.g. Unfriend). */
+  extraItems?: { label: string; icon?: ReactNode; onSelect: () => void }[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -71,6 +77,14 @@ export function ReportMenu({
 
   function confirmReport() {
     if (sheet?.kind !== "report" || !sheet.reason) return;
+    if (reportPerson && subjectId) {
+      const reason = sheet.reason;
+      const note = sheet.note.trim() || undefined;
+      reportUser({ userId: subjectId, reason, note })
+        .then(() => setSheet({ kind: "report-thanks" }))
+        .catch(() => setSheet({ kind: "report-thanks" }));
+      return;
+    }
     // Saved to Supabase when configured (insert-only); always hidden locally right away.
     void fileReport({
       momentId: parentMomentId ?? itemId,
@@ -111,6 +125,19 @@ export function ReportMenu({
 
       {menuOpen && (
         <div className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-2xl border border-ink-100 bg-cream-50 shadow-card">
+          {extraItems?.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink-700 hover:bg-cream-100"
+              onClick={() => {
+                setMenuOpen(false);
+                item.onSelect();
+              }}
+            >
+              {item.icon} {item.label}
+            </button>
+          ))}
           <button
             type="button"
             className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink-700 hover:bg-cream-100"
@@ -230,7 +257,7 @@ export function ReportMenu({
 
       {sheet?.kind === "block-done" && (
         <CreamSheet title="Blocked" description="Blocked." onClose={() => setSheet(null)}>
-          <p className="mt-3 text-xs text-ink-400">They won’t show up in your feed or search on this device.</p>
+          <p className="mt-3 text-xs text-ink-400">They won’t show up in your feed or search.</p>
           <Button className="mt-5 w-full" onClick={() => setSheet(null)}>
             Done
           </Button>

@@ -26,3 +26,12 @@ body {
     text-wrap: balance;
   }
 }
+
+/* "You and X are friends now." row on /friends: holds, then fades over ~2s. */
+@keyframes fadeOut {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[fadeOut_2s_ease-in_forwards\] { animation: none; }
+}

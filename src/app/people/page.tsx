@@ -11,7 +11,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { people as samplePeople, type Person } from "@/data/seed";
 import { listBlockedIds } from "@/lib/blocks";
 import { follow, listFollowingIds, listPeople, unfollow } from "@/lib/follows";
-import { listFriends, listOutgoing, sendKnock } from "@/lib/knocks";
+import { ReportMenu } from "@/components/ReportMenu";
+import { cancelKnock, listFriends, listOutgoing, sendKnock, type Knock } from "@/lib/knocks";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_INTERESTS = ["trails", "cooking", "design", "music", "markets", "plants"] as const;
@@ -25,8 +26,9 @@ function PeoplePageContent() {
   const [people, setPeople] = useState<Person[]>(samplePeople);
   const [blockedList, setBlockedList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  // People you've knocked on (or are already friends with): the Knock button shows "Knocked".
-  const [knocked, setKnocked] = useState<Record<string, boolean>>({});
+  // Knock (amber outline) -> Knocked (quiet, tap to take back) -> Friends pill.
+  // A value of null means "knocked, waiting for the server's knock id".
+  const [knocked, setKnocked] = useState<Record<string, Knock | null>>({});
   const [friendIds, setFriendIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -35,7 +37,7 @@ function PeoplePageContent() {
     Promise.all([listOutgoing(user.id), listFriends(user.id)])
       .then(([out, fr]) => {
         if (cancelled) return;
-        setKnocked(Object.fromEntries(out.map((k) => [k.person.id, true])));
+        setKnocked(Object.fromEntries(out.map((k) => [k.person.id, k])));
         setFriendIds(Object.fromEntries(fr.map((p) => [p.id, true])));
       })
       .catch(() => undefined);
@@ -45,16 +47,46 @@ function PeoplePageContent() {
   }, [user]);
 
   async function knock(p: Person) {
-    if (!user || knocked[p.id]) return;
-    setKnocked((prev) => ({ ...prev, [p.id]: true }));
+    if (!user || p.id in knocked) return;
+    setKnocked((prev) => ({ ...prev, [p.id]: null }));
     setError(null);
     try {
       await sendKnock(user.id, { id: p.id, name: p.name, handle: p.handle });
+      // A mutual knock makes you friends straight away; otherwise pick up the knock id.
+      const [out, fr] = await Promise.all([listOutgoing(user.id), listFriends(user.id)]);
+      setFriendIds(Object.fromEntries(fr.map((f) => [f.id, true])));
+      const mine = out.find((k) => k.person.id === p.id);
+      setKnocked((prev) => ({ ...prev, [p.id]: mine ?? null }));
     } catch (e) {
-      setKnocked((prev) => ({ ...prev, [p.id]: false }));
+      setKnocked((prev) => {
+        const next = { ...prev };
+        delete next[p.id];
+        return next;
+      });
       setError((e as Error).message);
     }
   }
+
+  async function takeBack(p: Person) {
+    const k = knocked[p.id];
+    if (!user || !k) return;
+    setKnocked((prev) => {
+      const next = { ...prev };
+      delete next[p.id];
+      return next;
+    });
+    try {
+      await cancelKnock(user.id, k);
+    } catch (e) {
+      setKnocked((prev) => ({ ...prev, [p.id]: k }));
+      setError((e as Error).message);
+    }
+  }
+
+  function onBlockedPerson(id: string) {
+    setBlockedList((list) => (list.includes(id) ? list : [...list, id]));
+  }
+
 
   useEffect(() => {
     if (!user) return;
@@ -186,17 +218,30 @@ function PeoplePageContent() {
                 >
                   {isFollowing ? "Following" : "Follow"}
                 </Button>
-                {!friendIds[p.id] && (
-                  <Button
-                    variant="secondary"
-                    className="!px-4 !py-2 text-xs"
-                    disabled={!!knocked[p.id]}
-                    onClick={() => void knock(p)}
-                    aria-label={knocked[p.id] ? `Knocked on ${p.name}’s door` : `Knock on ${p.name}’s door`}
+                {friendIds[p.id] ? (
+                  <span className="rounded-full bg-cream-100 px-3 py-1.5 text-xs font-medium text-ink-600">Friends</span>
+                ) : p.id in knocked ? (
+                  <button
+                    type="button"
+                    onClick={() => void takeBack(p)}
+                    disabled={!knocked[p.id]}
+                    title="Tap to take back"
+                    aria-label={`Knocked on ${p.name}’s door. Tap to take back.`}
+                    className="rounded-full px-3 py-1.5 text-xs text-ink-500 hover:bg-cream-100 hover:text-ink-800"
                   >
-                    {knocked[p.id] ? "Knocked" : "Knock"}
-                  </Button>
+                    Knocked
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void knock(p)}
+                    aria-label={`Knock on ${p.name}’s door`}
+                    className="rounded-full border border-ember-glow px-4 py-2 text-xs font-medium text-ember-glow transition hover:bg-ember-100"
+                  >
+                    Knock
+                  </button>
                 )}
+                <ReportMenu subject={p.name} subjectId={p.id} reportPerson onBlocked={onBlockedPerson} />
               </div>
             );
           })}
