@@ -11,7 +11,8 @@ export default function TermsPage() {
       lastUpdated="Oct 21, 2026"
     >
       <LegalSection title="Who can join">
-        <p>You must be 13 or older to use Hearth. If you are under 13, please don’t create an account.</p>
+        <p>You must be 13 or older. We close accounts we learn belong to anyone under 13 and delete their data.</p>
+        <p>One real person per account.</p>
       </LegalSection>
 
       <LegalSection title="What you can post">
@@ -21,7 +22,7 @@ export default function TermsPage() {
           <li>Harassment, threats, or hate aimed at people or groups.</li>
           <li>Sexual content involving minors, or anyone’s private images shared without consent.</li>
           <li>Other people’s private information, like addresses or phone numbers.</li>
-          <li>Spam, scams, or impersonation.</li>
+          <li>Spam, scams, fake accounts, or impersonation.</li>
           <li>Anything illegal, or content you don’t have the rights to share.</li>
         </ul>
       </LegalSection>
@@ -46,6 +47,7 @@ export default function TermsPage() {
           <li>Animals.</li>
           <li>Recalled goods.</li>
         </ul>
+        <p>Report a scam listing from its ··· menu.</p>
       </LegalSection>
 
       <LegalSection title="Copyright">

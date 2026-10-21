@@ -44,19 +44,21 @@ export default function PrivacyPage() {
 
       <LegalSection title="Who sees what">
         <p>
-          New Moments go to friends by default. You can mark a Moment public when you want to. Blocking someone
+          Once real accounts launch, new Moments will go to friends by default. You can mark a Moment public when you want to. Blocking someone
           hides you from each other.
         </p>
       </LegalSection>
 
       <LegalSection title="Deleting your account">
         <p>
-          Go to Settings and choose Delete account. We remove your profile, posts, and messages from Hearth, and
-          clear any backups on their normal schedule. Messages you sent may still appear in the other person’s
-          copy of a conversation until they delete it.
+          Email{" "}
+          <a href={`mailto:${PRIVACY_EMAIL}`} className="underline underline-offset-2">{PRIVACY_EMAIL}</a>{" "}
+          to delete your account. We remove your profile, posts, and messages from Hearth, and clear any backups
+          on their normal schedule. Messages you sent may still appear in the other person’s copy of a
+          conversation until they delete it.
         </p>
         <p>
-          If you can’t reach Settings, email us and we’ll do it for you. <Todo>Delete account isn’t in Settings yet — add it before launch.</Todo>
+          <Todo>switch to the Settings → Delete account button once it ships.</Todo>
         </p>
       </LegalSection>
 
