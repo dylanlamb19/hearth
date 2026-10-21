@@ -26,6 +26,8 @@ export type Comment = {
   body: string | null;
   deleted: boolean;
   createdAt: string;
+  loveCount: number;
+  lovedByMe: boolean;
 };
 
 function stored(momentId: string) {
@@ -99,10 +101,18 @@ type CommentRow = {
   body: string | null;
   deleted: boolean;
   created_at: string;
+  love_count: number | null;
+  loved_by_me: boolean | null;
 };
 
 function demoComments(): Comment[] {
-  return readJson<Comment[]>(COMMENTS_KEY, []).map((c) => ({ ...c, parentId: c.parentId ?? null, deleted: !!c.deleted }));
+  return readJson<Comment[]>(COMMENTS_KEY, []).map((c) => ({
+    ...c,
+    parentId: c.parentId ?? null,
+    deleted: !!c.deleted,
+    loveCount: c.loveCount ?? 0,
+    lovedByMe: !!c.lovedByMe,
+  }));
 }
 
 /** Demo: same placeholder rule as the server (removed + has replies → placeholder). */
@@ -110,7 +120,7 @@ function demoThread(momentId: string): Comment[] {
   const all = demoComments().filter((c) => c.momentId === momentId);
   return all
     .filter((c) => !c.deleted || all.some((r) => r.parentId === c.id && !r.deleted))
-    .map((c) => (c.deleted ? { ...c, authorId: null, authorName: null, body: null } : c));
+    .map((c) => (c.deleted ? { ...c, authorId: null, authorName: null, body: null, loveCount: 0, lovedByMe: false } : c));
 }
 
 export async function listComments(momentId: string): Promise<Comment[]> {
@@ -127,6 +137,8 @@ export async function listComments(momentId: string): Promise<Comment[]> {
     body: r.body,
     deleted: r.deleted,
     createdAt: r.created_at,
+    loveCount: r.love_count ?? 0,
+    lovedByMe: !!r.loved_by_me,
   }));
 }
 
@@ -149,6 +161,8 @@ export async function addComment(
       body: text,
       deleted: false,
       createdAt: new Date().toISOString(),
+      loveCount: 0,
+      lovedByMe: false,
     };
     writeJson(COMMENTS_KEY, [...demoComments(), c]);
     return c;
@@ -165,7 +179,7 @@ export async function addComment(
     throw new Error("Couldn’t post that comment. Try again?");
   }
   const row = data as { id: string; created_at: string };
-  return { id: row.id, momentId, parentId, authorId: author.id, authorName: author.name, body: text, deleted: false, createdAt: row.created_at };
+  return { id: row.id, momentId, parentId, authorId: author.id, authorName: author.name, body: text, deleted: false, createdAt: row.created_at, loveCount: 0, lovedByMe: false };
 }
 
 /** Soft delete. Allowed for the comment's author or the Moment's author. No editing (follow-up). */
@@ -177,4 +191,24 @@ export async function deleteComment(comment: Comment): Promise<void> {
   }
   const { error } = await sb.rpc("delete_comment", { comment_id: comment.id });
   if (error) throw new Error("Couldn’t delete that comment. Try again?");
+}
+
+/** Love or un-love a comment. Returns whether you love it now. Demo: stored locally. */
+export async function toggleCommentLove(comment: Comment): Promise<boolean> {
+  const sb = stored(comment.momentId);
+  if (!sb || !UUID.test(comment.id)) {
+    let now = !comment.lovedByMe;
+    writeJson(
+      COMMENTS_KEY,
+      demoComments().map((c) => {
+        if (c.id !== comment.id) return c;
+        now = !c.lovedByMe;
+        return { ...c, lovedByMe: now, loveCount: Math.max(0, c.loveCount + (now ? 1 : -1)) };
+      }),
+    );
+    return now;
+  }
+  const { data, error } = await sb.rpc("toggle_comment_love", { target_comment: comment.id });
+  if (error) throw new Error("Couldn’t do that right now.");
+  return Boolean(data);
 }
