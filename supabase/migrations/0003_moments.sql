@@ -58,7 +58,7 @@ create or replace function public.delete_moment(moment_id uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   update public.moments

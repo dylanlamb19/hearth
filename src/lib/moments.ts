@@ -42,6 +42,7 @@ export type MomentList = {
   hasReal: boolean;
 };
 
+// RLS hides deleted rows; deleted_at isn't readable by the client, so it never appears in queries.
 /** Your stored Moments plus public ones, newest first. Empty in demo mode (seed posts cover the feed). */
 export async function listMoments(): Promise<MomentList> {
   const sb = getSupabaseBrowserClient();
@@ -49,7 +50,6 @@ export async function listMoments(): Promise<MomentList> {
   const { data, error } = await sb
     .from("moments")
     .select(SELECT)
-    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
   if (error || !data) return { moments: [], hasReal: false };

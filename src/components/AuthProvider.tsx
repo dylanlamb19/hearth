@@ -212,7 +212,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const row = sessionPatchToRow(patch);
           if (Object.keys(row).length > 0) {
             sb.from("profiles")
-              .upsert({ id: prev.id, ...row })
+              // The signup trigger creates the row; update only granted columns (id isn't updatable).
+              .update(row)
+              .eq("id", prev.id)
               .then(({ error }) => {
                 if (error) console.warn("[hearth] profile save failed:", error.message);
               });
