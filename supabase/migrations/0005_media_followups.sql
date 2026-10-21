@@ -229,3 +229,15 @@ revoke all on function public.claim_orphan_uploads(int) from public, anon, authe
 revoke all on function public.find_untracked_media(int) from public, anon, authenticated;
 grant execute on function public.claim_orphan_uploads(int) to service_role;
 grant execute on function public.find_untracked_media(int) to service_role;
+
+-- Account-deletion password checks, for a per-user rate limit (about 5 per 15 minutes).
+-- Server-only (service role); old rows can be pruned any time.
+create table if not exists public.account_delete_attempts (
+  id bigint generated always as identity primary key,
+  user_id uuid not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists account_delete_attempts_user_idx
+  on public.account_delete_attempts (user_id, created_at);
+alter table public.account_delete_attempts enable row level security;
+revoke all on public.account_delete_attempts from anon, authenticated;

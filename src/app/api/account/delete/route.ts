@@ -5,6 +5,9 @@ import { deleteAccount, verifyPassword } from "@/lib/supabase/deleteAccount";
 
 export const runtime = "nodejs";
 
+const MAX_ATTEMPTS = 5;
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+
 /**
  * Deletes the signed-in person's account. Body: { password, confirm: "delete" }.
  * The password is re-checked server-side and the word "delete" must be typed.
@@ -24,6 +27,23 @@ export async function POST(request: NextRequest) {
   if (confirm !== "delete") {
     return NextResponse.json({ error: "Type “delete” to confirm." }, { status: 400 });
   }
+  // Rate limit the password check: about 5 tries per 15 minutes per person.
+  const since = new Date(Date.now() - ATTEMPT_WINDOW_MS).toISOString();
+  const { count, error: countError } = await admin
+    .from("account_delete_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("created_at", since);
+  if (countError) {
+    console.error("[hearth] delete attempt count failed", { error: countError.message });
+    return NextResponse.json({ error: "Couldn’t check that right now. Try again later." }, { status: 503 });
+  }
+  if ((count ?? 0) >= MAX_ATTEMPTS) {
+    return NextResponse.json({ error: "Too many tries. Wait 15 minutes and try again." }, { status: 429 });
+  }
+  const { error: logError } = await admin.from("account_delete_attempts").insert({ user_id: user.id });
+  if (logError) console.error("[hearth] delete attempt log failed", { error: logError.message });
+
   if (!(await verifyPassword(user.id, user.email ?? "", password))) {
     return NextResponse.json({ error: "That password isn’t right." }, { status: 403 });
   }
