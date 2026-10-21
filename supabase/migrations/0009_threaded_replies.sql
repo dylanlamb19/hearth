@@ -245,6 +245,7 @@ set search_path = public, pg_temp
 as $$
 declare
   parent record;
+  top record;
 begin
   if new.parent_id is not null then
     select c.moment_id, c.parent_id, c.author_id into parent
@@ -261,6 +262,16 @@ begin
     -- One level only: a reply to a reply goes under the top-level comment.
     if parent.parent_id is not null then
       new.parent_id := parent.parent_id;
+      -- Same checks on the top-level comment and its author: it must be live (not removed),
+      -- not hidden unless theirs, on a visible Moment, with no block either way.
+      select c.moment_id, c.author_id into top
+        from public.comments c where c.id = new.parent_id;
+      if not found
+         or top.moment_id <> new.moment_id
+         or not public.can_report_comment(new.parent_id, new.moment_id)
+         or public.is_blocked_between(new.author_id, top.author_id) then
+        raise exception 'Can''t reply to that comment' using errcode = '23514';
+      end if;
     end if;
   end if;
   if (
