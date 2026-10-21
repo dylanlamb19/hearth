@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { follow, listFollowingIds, unfollow } from "@/lib/follows";
 import Link from "next/link";
 import { Image as ImageIcon, Video, Smile, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -49,6 +50,25 @@ export default function HomePage() {
   const [reportedIds, setReportedIds] = useState<string[]>([]);
   const [feed, setFeed] = useState<Post[]>(seedPosts);
   const [toast, setToast] = useState<string | null>(null);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    listFollowingIds(user.id, user.followingIds ?? [])
+      .then(setFollowingIds)
+      .catch(() => setFollowingIds([]));
+  }, [user]);
+
+  async function toggleFollow(id: string) {
+    const was = followingIds.includes(id);
+    setFollowingIds((prev) => (was ? prev.filter((x) => x !== id) : [...prev, id]));
+    try {
+      await (was ? unfollow(id) : follow(id));
+    } catch (e) {
+      setFollowingIds((prev) => (was ? [...prev, id] : prev.filter((x) => x !== id)));
+      showToast((e as Error).message);
+    }
+  }
 
   // Re-read localStorage block list each render (free-tier, this device).
   const blockedIds = new Set(getBlockedIds());
@@ -424,7 +444,9 @@ export default function HomePage() {
                     <p className="truncate text-sm font-medium text-ink-800">{p.name}</p>
                     <p className="text-xs text-ink-400">{p.mutuals} mutuals</p>
                   </div>
-                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs">Follow</Button>
+                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => void toggleFollow(p.id)}>
+                    {followingIds.includes(p.id) ? "Following" : "Follow"}
+                  </Button>
                 </div>
               ))}
             </div>
