@@ -35,7 +35,7 @@ function HearthMark({ className }: { className?: string }) {
 }
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, mode } = useAuth();
   const composerRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -210,23 +210,37 @@ export default function HomePage() {
               <input
                 ref={photoInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 className="sr-only"
                 tabIndex={-1}
                 aria-hidden
                 onChange={(e) => handleMediaPick(e.target.files, photoInputRef.current)}
               />
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                aria-pressed={attachment?.kind === "video"}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
-                  attachment?.kind === "video" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
-                )}
-              >
-                <Video className="h-4 w-4 text-ember-500" /> Video
-              </button>
+              {mode === "supabase" ? (
+                // Video is off for real accounts until its metadata can be stripped server-side.
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="Coming soon"
+                  // Same look as Feeling.
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-600 hover:bg-cream-100"
+                >
+                  <Video className="h-4 w-4 text-ember-500" /> Video · Coming soon
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  aria-pressed={attachment?.kind === "video"}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-cream-100",
+                    attachment?.kind === "video" ? "bg-cream-100 font-medium text-ink-800 ring-1 ring-ember-300" : "text-ink-600",
+                  )}
+                >
+                  <Video className="h-4 w-4 text-ember-500" /> Video
+                </button>
+              )}
               <input
                 ref={videoInputRef}
                 type="file"

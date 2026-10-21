@@ -3,9 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import sharp from "sharp";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { IMAGE_MAX_BYTES, IMAGE_MAX_SIDE, MEDIA_BUCKET, VIDEO_MAX_BYTES, VIDEO_TYPES } from "@/lib/mediaLimits";
+import { IMAGE_MAX_BYTES, IMAGE_MAX_SIDE, MEDIA_BUCKET } from "@/lib/mediaLimits";
 
 export const runtime = "nodejs";
+
+// HEIC is left out: sharp's prebuilt binaries usually can't decode it.
+const ALLOWED_FORMATS = new Set(["jpeg", "png", "webp", "gif"]);
+const UPLOAD_LIMIT = 20;
+const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
 
 function fail(status: number, error: string) {
   return NextResponse.json({ error }, { status });
@@ -15,8 +20,7 @@ function fail(status: number, error: string) {
  * The only way media gets into the bucket.
  * - multipart "file" (photo): re-encoded here with sharp, which drops EXIF/GPS and all other
  *   metadata, then stored under <user id>/<uuid>.jpg.
- * - JSON { kind: "video", type, size }: returns a one-time signed upload URL for
- *   <user id>/<uuid>.<ext>. Video metadata is NOT stripped (see the PR notes).
+ * - Anything else (including video) is refused for now.
  */
 export async function POST(request: NextRequest) {
   const supabase = await getSupabaseServerClient();
@@ -29,26 +33,37 @@ export async function POST(request: NextRequest) {
 
   const contentType = request.headers.get("content-type") || "";
 
+  // Video is off for real accounts: its metadata (which can include location) can't be
+  // stripped server-side on the free tier yet.
   if (contentType.startsWith("application/json")) {
-    const body = (await request.json().catch(() => null)) as { kind?: string; type?: string; size?: number } | null;
-    const ext = body?.type ? VIDEO_TYPES[body.type] : undefined;
-    if (body?.kind !== "video" || !ext) return fail(415, "That video type isn’t supported. Try MP4.");
-    if (!body.size || body.size > VIDEO_MAX_BYTES) return fail(413, "Videos can be up to 50 MB.");
-    const path = `${userId}/${randomUUID()}.${ext}`;
-    const { data, error } = await admin.storage.from(MEDIA_BUCKET).createSignedUploadUrl(path);
-    if (error || !data) return fail(500, "Couldn’t start that upload. Try again?");
-    return NextResponse.json({ path, token: data.token, type: "video" });
+    return fail(403, "Video uploads are coming soon. Photos work today.");
+  }
+
+  // Rate limit: at most 20 photos per 10 minutes per person, counted from their own folder.
+  const { data: recent } = await admin.storage
+    .from(MEDIA_BUCKET)
+    .list(userId, { limit: UPLOAD_LIMIT, sortBy: { column: "created_at", order: "desc" } });
+  const oldest = recent && recent.length >= UPLOAD_LIMIT ? recent[recent.length - 1]?.created_at : null;
+  if (oldest && Date.now() - new Date(oldest).getTime() < UPLOAD_WINDOW_MS) {
+    return fail(429, "That’s a lot of photos at once. Try again in a few minutes.");
   }
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return fail(400, "No photo found.");
+  if (!file.type.startsWith("image/")) return fail(403, "Video uploads are coming soon. Photos work today.");
   if (file.size > IMAGE_MAX_BYTES) return fail(413, "Photos can be up to 4 MB.");
 
   let output: Buffer;
   try {
+    const input = Buffer.from(await file.arrayBuffer());
+    // Trust the decoded format, not the declared MIME type. No SVG, TIFF or anything else.
+    const { format } = await sharp(input).metadata();
+    if (!format || !ALLOWED_FORMATS.has(format)) {
+      return fail(415, "That photo type isn’t supported. Try a JPEG or PNG.");
+    }
     // sharp writes no metadata unless asked, so EXIF (including GPS) is gone.
-    output = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 50_000_000 })
+    output = await sharp(input, { limitInputPixels: 50_000_000 })
       .rotate()
       .resize({ width: IMAGE_MAX_SIDE, height: IMAGE_MAX_SIDE, fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 85 })
