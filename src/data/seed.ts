@@ -1,3 +1,5 @@
+import type { ReactionKind } from "@/lib/reactionKinds";
+
 export type Person = {
   id: string;
   name: string;
@@ -27,8 +29,10 @@ export type Post = {
 };
 
 export type PostReaction = {
-  emoji: string;
+  kind: ReactionKind;
   personId: string;
+  /** Display name when the person isn't in the sample roster. */
+  name?: string;
 };
 
 export type Moment = {
@@ -170,31 +174,31 @@ export const posts: Post[] = [
 /** Seed reactors per post (person ids). Sheet shows up to ~20. */
 export const postReactions: Record<string, PostReaction[]> = {
   p1: [
-    { emoji: "❤️", personId: "u-jordan" },
-    { emoji: "❤️", personId: "u-sam" },
-    { emoji: "❤️", personId: "u-nova" },
-    { emoji: "❤️", personId: "u-leo" },
-    { emoji: "❤️", personId: "u-aria" },
-    { emoji: "❤️", personId: "u-ember" },
+    { kind: "love", personId: "u-jordan" },
+    { kind: "love", personId: "u-sam" },
+    { kind: "love", personId: "u-nova" },
+    { kind: "love", personId: "u-leo" },
+    { kind: "love", personId: "u-aria" },
+    { kind: "love", personId: "u-ember" },
   ],
   p2: [
-    { emoji: "❤️", personId: "u-maya" },
-    { emoji: "❤️", personId: "u-sam" },
-    { emoji: "❤️", personId: "u-nova" },
-    { emoji: "❤️", personId: "u-leo" },
-    { emoji: "❤️", personId: "u-aria" },
-    { emoji: "❤️", personId: "u-ember" },
-    { emoji: "🔥", personId: "u-maya" },
-    { emoji: "🔥", personId: "u-leo" },
+    { kind: "love", personId: "u-maya" },
+    { kind: "love", personId: "u-sam" },
+    { kind: "love", personId: "u-nova" },
+    { kind: "love", personId: "u-leo" },
+    { kind: "love", personId: "u-aria" },
+    { kind: "love", personId: "u-ember" },
+    { kind: "warm", personId: "u-maya" },
+    { kind: "warm", personId: "u-leo" },
   ],
   p3: [],
   p4: [
-    { emoji: "❤️", personId: "u-maya" },
-    { emoji: "❤️", personId: "u-jordan" },
-    { emoji: "❤️", personId: "u-sam" },
-    { emoji: "❤️", personId: "u-leo" },
-    { emoji: "❤️", personId: "u-aria" },
-    { emoji: "❤️", personId: "u-ember" },
+    { kind: "love", personId: "u-maya" },
+    { kind: "love", personId: "u-jordan" },
+    { kind: "love", personId: "u-sam" },
+    { kind: "love", personId: "u-leo" },
+    { kind: "love", personId: "u-aria" },
+    { kind: "love", personId: "u-ember" },
   ],
 };
 
