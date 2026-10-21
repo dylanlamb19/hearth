@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/adminGate";
 import { ConfirmSubmit } from "./ConfirmSubmit";
-import { removeComment, removeMoment, resolveFlaggedAccount, restoreComment, restoreMoment } from "./actions";
+import { removeComment, removeMoment, resolveFlaggedAccount, resolveUserReports, restoreComment, restoreMoment } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Open reports", robots: { index: false } };
@@ -10,6 +10,7 @@ type ReportRow = {
   id: string;
   moment_id: string | null;
   reported_user_id: string | null;
+  reported: { name: string | null; handle: string | null } | null;
   reporter_id: string | null;
   reason: string;
   note: string | null;
@@ -39,7 +40,7 @@ export default async function AdminReportsPage() {
     admin
       .from("reports")
       .select(
-        "id, moment_id, reported_user_id, reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
+        "id, moment_id, reported_user_id, reported:profiles!reports_reported_user_id_fkey(name, handle), reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
       )
       .eq("status", "open")
       .order("needs_account_review", { ascending: false })
@@ -53,6 +54,7 @@ export default async function AdminReportsPage() {
   ]);
   const reports = (reportData ?? []) as unknown as ReportRow[];
   const flagged = (flaggedData ?? []) as unknown as FlaggedRow[];
+  const flaggedIds = new Set(flagged.map((f) => f.user_id));
 
   return (
     <main className="mx-auto max-w-4xl space-y-10 px-4 py-10">
@@ -64,7 +66,7 @@ export default async function AdminReportsPage() {
         ) : (
           <ul className="mt-4 space-y-2">
             {flagged.map((f) => (
-              <li key={f.user_id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-ember-200 bg-white p-4 shadow-card">
+              <li key={f.user_id} id={`flag-${f.user_id}`} className="flex flex-wrap items-center gap-3 rounded-2xl border border-ember-200 bg-white p-4 shadow-card">
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="font-medium text-ink-900">
                     {f.profile?.name || "Unknown"} {f.profile?.handle ? <span className="text-ink-500">@{f.profile.handle}</span> : null}
@@ -121,7 +123,6 @@ export default async function AdminReportsPage() {
                 )}
                 {r.note && <p className="mt-1 text-sm text-ink-500">Note: {r.note}</p>}
                 <p className="mt-2 font-mono text-[11px] text-ink-400">
-                  {r.reported_user_id && <>reported person {r.reported_user_id} · </>}
                   {r.comment_id && <>comment {r.comment_id} · comment author {r.comment?.author_id ?? "—"} · </>}
                   moment {r.moment_id ?? "—"} · author {r.moment?.author_id ?? "—"} · reporter {r.reporter_id ?? "—"}
                 </p>
@@ -159,6 +160,25 @@ export default async function AdminReportsPage() {
                       >
                         Remove
                       </ConfirmSubmit>
+                    </form>
+                  </div>
+                )}
+                {!r.moment_id && r.reported_user_id && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <p className="text-sm text-ink-700">
+                      Reported person: {r.reported?.name || "Unknown"}
+                      {r.reported?.handle ? <span className="text-ink-500"> @{r.reported.handle}</span> : null}
+                    </p>
+                    {flaggedIds.has(r.reported_user_id) && (
+                      <a href={`#flag-${r.reported_user_id}`} className="text-xs text-ember-700 underline underline-offset-2">
+                        See account flag
+                      </a>
+                    )}
+                    <form action={resolveUserReports} className="ml-auto">
+                      <input type="hidden" name="userId" value={r.reported_user_id} />
+                      <button type="submit" className={`${pill} bg-cream-100 text-ink-700 hover:bg-cream-200`}>
+                        Resolve
+                      </button>
                     </form>
                   </div>
                 )}

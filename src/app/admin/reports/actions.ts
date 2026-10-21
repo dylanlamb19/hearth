@@ -123,3 +123,21 @@ export async function removeComment(form: FormData) {
   await audit(admin, adminId, "remove_comment", id);
   revalidatePath("/admin/reports");
 }
+
+/** Resolve: close the open reports about a person (person reports have no Moment). */
+export async function resolveUserReports(form: FormData) {
+  const session = await requireAdminSession();
+  const id = idFrom(form, "userId");
+  if (!session || !id) return;
+  const { admin, adminId } = session;
+  const { error } = await admin
+    .from("reports")
+    .update({ status: "resolved" })
+    .eq("reported_user_id", id)
+    .is("moment_id", null)
+    .eq("status", "open");
+  logDbError("resolve user reports", error, { userId: id });
+  if (error) return;
+  await audit(admin, adminId, "resolve_user_report", id);
+  revalidatePath("/admin/reports");
+}

@@ -31,6 +31,8 @@ export default function FriendsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Knocks just let in: the row shows "You and X are friends now." for ~2s, then leaves.
+  // Friend awaiting the inline cream "Remove X as a friend?" confirm.
+  const [confirmUnfriend, setConfirmUnfriend] = useState<string | null>(null);
   const [welcomed, setWelcomed] = useState<Record<string, boolean>>({});
 
   const showToast = useCallback((message: string) => {
@@ -42,7 +44,11 @@ export default function FriendsPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    Promise.all([listIncoming(user.id), listOutgoing(user.id), listFriends(user.id)])
+    Promise.all([
+      listIncoming(user.id),
+      listOutgoing(user.id),
+      listFriends(user.id),
+    ])
       .then(([inc, out, fr]) => {
         if (cancelled) return;
         setIncoming(inc);
@@ -73,7 +79,10 @@ export default function FriendsPage() {
     try {
       await respondKnock(user.id, knock, accept);
       if (accept) {
-        setFriends((list) => [knock.person, ...(list ?? []).filter((p) => p.id !== knock.person.id)]);
+        setFriends((list) => [
+          knock.person,
+          ...(list ?? []).filter((p) => p.id !== knock.person.id),
+        ]);
         setTimeout(() => {
           setIncoming((list) => list.filter((k) => k.id !== knock.id));
           setWelcomed((w) => {
@@ -107,7 +116,7 @@ export default function FriendsPage() {
 
   async function removeFriend(person: PersonLite) {
     if (!user) return;
-    if (!window.confirm(`Remove ${person.name} as a friend? You'll still follow each other.`)) return;
+    setConfirmUnfriend(null);
     setFriends((list) => (list ?? []).filter((p) => p.id !== person.id));
     try {
       await unfriend(user.id, person.id);
@@ -131,11 +140,16 @@ export default function FriendsPage() {
     <AppShell>
       <div className="mb-6">
         <h1 className="font-display text-3xl text-ink-900">Friends</h1>
-        <p className="mt-1 text-sm text-ink-500">Who’s knocking, and the people who belong in this room.</p>
+        <p className="mt-1 text-sm text-ink-500">
+          Who’s knocking, and the people who belong in this room.
+        </p>
       </div>
 
       <section aria-labelledby="knocking-heading" className="mb-8">
-        <h2 id="knocking-heading" className="mb-3 flex items-center gap-2 font-display text-xl text-ink-900">
+        <h2
+          id="knocking-heading"
+          className="mb-3 flex items-center gap-2 font-display text-xl text-ink-900"
+        >
           At the door
           {incoming.length > 0 && (
             <span className="rounded-full bg-ember-100 px-2 py-0.5 text-xs font-medium text-ember-700">
@@ -160,12 +174,18 @@ export default function FriendsPage() {
                   You and {k.person.name} are friends now.
                 </li>
               ) : (
-                <li key={k.id} className="flex items-center gap-3 rounded-3xl border border-ink-100 bg-cream-50 p-4 shadow-card">
+                <li
+                  key={k.id}
+                  className="flex items-center gap-3 rounded-3xl border border-ink-100 bg-cream-50 p-4 shadow-card"
+                >
                   <Avatar name={k.person.name} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-ink-900">{k.person.name}</p>
+                    <p className="truncate font-medium text-ink-900">
+                      {k.person.name}
+                    </p>
                     <p className="truncate text-xs text-ink-400">
-                      {k.person.handle ? `@${k.person.handle} · ` : ""}knocked {timeAgo(k.createdAt)}
+                      {k.person.handle ? `@${k.person.handle} · ` : ""}knocked{" "}
+                      {timeAgo(k.createdAt)}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -183,7 +203,12 @@ export default function FriendsPage() {
                     >
                       Not now
                     </button>
-                    <ReportMenu subject={k.person.name} subjectId={k.person.id} reportPerson onBlocked={blocked} />
+                    <ReportMenu
+                      subject={k.person.name}
+                      subjectId={k.person.id}
+                      reportPerson
+                      onBlocked={blocked}
+                    />
                   </div>
                 </li>
               ),
@@ -208,24 +233,68 @@ export default function FriendsPage() {
         <section aria-label="Your friends">
           <ul className="space-y-2">
             {friends.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 rounded-3xl border border-ink-100 bg-white p-4 shadow-card">
-                <Avatar name={p.name} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-ink-900">{p.name}</p>
-                  {p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>}
+              <li
+                key={p.id}
+                className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar name={p.name} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-ink-900">
+                      {p.name}
+                    </p>
+                    {p.handle && (
+                      <p className="truncate text-xs text-ink-400">
+                        @{p.handle}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs"
+                    disabled
+                    title="Messages are coming soon"
+                  >
+                    Coming soon
+                  </Button>
+                  <ReportMenu
+                    subject={p.name}
+                    subjectId={p.id}
+                    reportPerson
+                    onBlocked={blocked}
+                    extraItems={[
+                      {
+                        label: "Unfriend",
+                        icon: <UserMinus className="h-4 w-4 text-ink-500" />,
+                        onSelect: () => setConfirmUnfriend(p.id),
+                      },
+                    ]}
+                  />
                 </div>
-                <Button variant="ghost" className="!px-3 !py-1.5 text-xs" disabled title="Messages are coming soon">
-                  Coming soon
-                </Button>
-                <ReportMenu
-                  subject={p.name}
-                  subjectId={p.id}
-                  reportPerson
-                  onBlocked={blocked}
-                  extraItems={[
-                    { label: "Unfriend", icon: <UserMinus className="h-4 w-4 text-ink-500" />, onSelect: () => void removeFriend(p) },
-                  ]}
-                />
+                {confirmUnfriend === p.id && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cream-100 px-4 py-3 text-sm text-ink-700">
+                    <span>
+                      Remove {p.name} as a friend? You&apos;ll still follow each
+                      other.
+                    </span>
+                    <span className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmUnfriend(null)}
+                        className="rounded-full px-3 py-1.5 hover:bg-cream-200"
+                      >
+                        Keep
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void removeFriend(p)}
+                        className="rounded-full px-3 py-1.5 text-ink-500 hover:bg-cream-200 hover:text-ink-800"
+                      >
+                        Remove
+                      </button>
+                    </span>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -234,13 +303,24 @@ export default function FriendsPage() {
 
       {outgoing.length > 0 && (
         <section aria-labelledby="sent-heading" className="mt-8">
-          <h2 id="sent-heading" className="mb-3 text-sm font-medium text-ink-700">Doors you knocked on</h2>
+          <h2
+            id="sent-heading"
+            className="mb-3 text-sm font-medium text-ink-700"
+          >
+            Doors you knocked on
+          </h2>
           <ul className="space-y-2">
             {outgoing.map((k) => (
-              <li key={k.id} className="flex items-center gap-3 rounded-2xl bg-cream-100 px-4 py-3 text-ink-500">
+              <li
+                key={k.id}
+                className="flex items-center gap-3 rounded-2xl bg-cream-100 px-4 py-3 text-ink-500"
+              >
                 <Avatar name={k.person.name} size="sm" />
                 <p className="min-w-0 flex-1 truncate text-sm text-ink-500">
-                  {k.person.name} <span className="text-ink-400">· knocked {timeAgo(k.createdAt)}</span>
+                  {k.person.name}{" "}
+                  <span className="text-ink-400">
+                    · knocked {timeAgo(k.createdAt)}
+                  </span>
                 </p>
                 <button
                   type="button"
@@ -273,11 +353,42 @@ export default function FriendsPage() {
 /** Small door line drawing for the empty "At the door" state. */
 function DoorDrawing() {
   return (
-    <svg width="48" height="56" viewBox="0 0 48 56" fill="none" aria-hidden className="text-ink-300">
-      <path d="M10 52V6a2 2 0 0 1 2-2h24a2 2 0 0 1 2 2v46" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M4 52h40" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <rect x="15" y="10" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="31" cy="32" r="1.8" fill="currentColor" className="text-ember-glow" />
+    <svg
+      width="48"
+      height="56"
+      viewBox="0 0 48 56"
+      fill="none"
+      aria-hidden
+      className="text-ink-300"
+    >
+      <path
+        d="M10 52V6a2 2 0 0 1 2-2h24a2 2 0 0 1 2 2v46"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4 52h40"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <rect
+        x="15"
+        y="10"
+        width="18"
+        height="14"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <circle
+        cx="31"
+        cy="32"
+        r="1.8"
+        fill="currentColor"
+        className="text-ember-glow"
+      />
     </svg>
   );
 }

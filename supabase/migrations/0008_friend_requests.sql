@@ -61,15 +61,20 @@ create index if not exists knock_events_sender_idx on public.knock_events (sende
 alter table public.knock_events enable row level security;
 revoke all on public.knock_events from anon, authenticated;
 
--- "Not now" markers: permanent, server-only. A declined sender can never knock that door again
--- (send_knock quietly succeeds instead), and taking the knock back doesn't reset it. If the
--- person who declined later knocks back, the marker is cleared and they become friends.
+-- "Not now" markers: permanent, server-only. If a declined sender knocks again, their knock row
+-- comes back as 'declined', so it looks pending to them but never reaches the recipient's list.
+-- Taking the knock back keeps the marker and sets withdrawn. If the person who declined later
+-- knocks back while the sender's knock still stands (not withdrawn), they become friends;
+-- after a withdrawal it's a normal pending knock instead.
 create table if not exists public.knock_declines (
   sender_id uuid not null references public.profiles (id) on delete cascade,
   recipient_id uuid not null references public.profiles (id) on delete cascade,
   declined_at timestamptz not null default now(),
+  -- Set when the declined sender takes their knock back; cleared if they knock again.
+  withdrawn boolean not null default false,
   primary key (sender_id, recipient_id)
 );
+alter table public.knock_declines add column if not exists withdrawn boolean not null default false;
 alter table public.knock_declines enable row level security;
 revoke all on public.knock_declines from anon, authenticated;
 
@@ -90,9 +95,9 @@ $$;
 revoke all on function public.make_friends(uuid, uuid) from public, anon, authenticated;
 
 -- Knock on someone's door. A missing account, yourself, or a block in either direction all raise
--- the same error (HKNK1). About 50 knocks a day (HKNK2). Already friends, already knocked, or
--- declined by them before: quietly does nothing, so a declined sender can't tell. If they have a
--- live knock on your door, or you once said "Not now" to them, you become friends.
+-- the same error (HKNK1). About 50 knocks a day (HKNK2). Already friends or already knocked:
+-- quietly does nothing. Declined by them before: looks like a normal knock to you, but it never
+-- reaches them. If their knock on your door still stands, you become friends.
 create or replace function public.send_knock(target uuid)
 returns void
 language plpgsql
@@ -118,26 +123,35 @@ begin
   if exists (select 1 from public.friendships f where f.user_a = least(me, target) and f.user_b = greatest(me, target)) then
     return;
   end if;
-  -- They declined me before: quiet success, nothing new is visible to them.
-  if exists (select 1 from public.knock_declines d where d.sender_id = me and d.recipient_id = target) then
-    return;
-  end if;
-  -- They have a live knock on my door, or I once declined them: let them in.
+  -- Their knock on my door still stands (live pending, or one I said "Not now" to and they
+  -- haven't taken back): let them in.
   if exists (select 1 from public.friend_requests r
               where r.sender_id = target and r.recipient_id = me and r.status = 'pending'
                 and r.created_at > now() - interval '90 days')
-     or exists (select 1 from public.knock_declines d where d.sender_id = target and d.recipient_id = me) then
+     or exists (select 1 from public.knock_declines d
+                 where d.sender_id = target and d.recipient_id = me and not d.withdrawn) then
     perform public.make_friends(me, target);
     return;
   end if;
   if exists (select 1 from public.friend_requests r where r.sender_id = me and r.recipient_id = target) then
     return;
   end if;
+  -- From here on it looks exactly like a normal knock to me (same cap, same row), whether or not
+  -- they declined me before.
+  perform pg_advisory_xact_lock(hashtextextended('knock-sender:' || me::text, 0));
   if (select count(*) from public.knock_events e where e.sender_id = me and e.created_at > now() - interval '24 hours') >= 50 then
     raise exception 'HEARTH_KNOCK_LIMIT' using errcode = 'HKNK2';
   end if;
   insert into public.knock_events (sender_id) values (me);
-  insert into public.friend_requests (sender_id, recipient_id) values (me, target) on conflict do nothing;
+  if exists (select 1 from public.knock_declines d where d.sender_id = me and d.recipient_id = target) then
+    -- Declined before: recreate my row as 'declined' (looks pending to me, hidden from them).
+    update public.knock_declines set withdrawn = false where sender_id = me and recipient_id = target;
+    insert into public.friend_requests (sender_id, recipient_id, status, responded_at)
+    values (me, target, 'declined', now())
+    on conflict do nothing;
+  else
+    insert into public.friend_requests (sender_id, recipient_id) values (me, target) on conflict do nothing;
+  end if;
 end;
 $$;
 
@@ -179,7 +193,7 @@ begin
 end;
 $$;
 
--- Take back a knock you sent (pending or quietly declined). A "Not now" marker stays.
+-- Take back a knock you sent (pending or quietly declined). A "Not now" marker stays (withdrawn).
 create or replace function public.cancel_knock(knock_id uuid)
 returns void
 language plpgsql
@@ -188,14 +202,18 @@ set search_path = public, pg_temp
 as $$
 declare
   me uuid := auth.uid();
+  other uuid;
 begin
   if me is null then
     raise exception 'Not signed in' using errcode = '28000';
   end if;
-  delete from public.friend_requests where id = knock_id and sender_id = me;
+  delete from public.friend_requests where id = knock_id and sender_id = me
+  returning recipient_id into other;
   if not found then
     raise exception 'HEARTH_KNOCK_FAILED' using errcode = 'HKNK1';
   end if;
+  -- Keep the "Not now" marker; just note the knock was taken back.
+  update public.knock_declines set withdrawn = true where sender_id = me and recipient_id = other;
 end;
 $$;
 
@@ -251,7 +269,8 @@ alter table public.reports
 create unique index if not exists reports_one_per_reporter_user
   on public.reports (reporter_id, reported_user_id) where moment_id is null and reported_user_id is not null;
 
--- Same generic error (HRPT1) for yourself, a missing account, or when the target has blocked you.
+-- Generic error (HRPT1) only for yourself, a missing account or bad input. If the target has
+-- blocked you, it returns quietly and saves nothing (so it can't count toward anything).
 -- 20 person reports per 24 hours (HRPT2). Reporting the same person again quietly does nothing.
 -- "Someone under 13" flags the account for review at /admin/reports.
 create or replace function public.report_user(target uuid, reason text, note text default null)
@@ -271,9 +290,11 @@ begin
      or reason is null
      or length(reason) > 100
      or length(coalesce(note, '')) > 1000
-     or not exists (select 1 from public.profiles p where p.id = target)
-     or exists (select 1 from public.blocks b where b.blocker_id = target and b.blocked_id = me) then
+     or not exists (select 1 from public.profiles p where p.id = target) then
     raise exception 'HEARTH_REPORT_FAILED' using errcode = 'HRPT1';
+  end if;
+  if exists (select 1 from public.blocks b where b.blocker_id = target and b.blocked_id = me) then
+    return;
   end if;
   perform pg_advisory_xact_lock(hashtextextended('report_user:' || me::text, 0));
   if exists (select 1 from public.reports r
@@ -296,5 +317,11 @@ end;
 $$;
 revoke all on function public.report_user(uuid, text, text) from public, anon;
 grant execute on function public.report_user(uuid, text, text) to authenticated;
+
+-- Admin audit log: resolving person reports.
+alter table public.admin_audit_log drop constraint if exists admin_audit_log_action_check;
+alter table public.admin_audit_log
+  add constraint admin_audit_log_action_check
+  check (action in ('restore', 'remove', 'resolve_flag', 'restore_comment', 'remove_comment', 'resolve_user_report'));
 
 -- TODO(friends visibility): the moments friends clause can now use public.friendships.
