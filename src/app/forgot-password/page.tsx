@@ -4,13 +4,25 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Stubbed reset-token flow: always show the same confirmation (no account enumeration).
+    const email = String(new FormData(e.currentTarget).get("email") || "").trim().toLowerCase();
+    const sb = getSupabaseBrowserClient();
+    if (sb && email) {
+      setBusy(true);
+      // Errors are ignored on purpose: the same confirmation shows either way (no account enumeration).
+      await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
+      setBusy(false);
+    }
     setSent(true);
   }
 
@@ -38,7 +50,7 @@ export default function ForgotPasswordPage() {
                 className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-ink-900 shadow-sm focus:border-ember-400 focus:ring-ember-300"
               />
             </label>
-            <Button type="submit" className="w-full">Send reset link</Button>
+            <Button type="submit" className="w-full" disabled={busy}>Send reset link</Button>
           </form>
         )}
         <p className="mt-6 text-sm text-ink-500">
