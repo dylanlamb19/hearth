@@ -7,6 +7,7 @@ export function StaticPage({
   lead,
   draft = false,
   lastUpdated,
+  template = false,
   children,
 }: {
   title: string;
@@ -15,12 +16,22 @@ export function StaticPage({
   draft?: boolean;
   /** Short date label, e.g. “Sep 6, 2026”. */
   lastUpdated?: string;
+  /** Shows the “Template — pending legal review.” banner on unreviewed legal copy. */
+  template?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="min-h-screen bg-cream-100">
       <PublicHeader />
       <main className="mx-auto max-w-3xl px-4 py-12">
+        {template && (
+          <div
+            role="note"
+            className="mb-8 rounded-2xl border border-ember-200 bg-ember-50 px-4 py-3 text-sm font-medium text-ember-800"
+          >
+            Template — pending legal review.
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">Hearth</p>
           {draft && (
