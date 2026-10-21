@@ -16,7 +16,11 @@ export function birthYearOptions(now: Date = new Date()): number[] {
   return Array.from({ length: 101 }, (_, i) => thisYear - i);
 }
 
-// TODO(#22): persist the age block server-side so it survives cleared storage and other devices.
+/**
+ * Device flag set when the age gate blocks someone. With real accounts the server
+ * enforces the same rule (supabase/migrations/0002_age_gate.sql refuses the signup),
+ * so clearing this flag doesn’t get around it.
+ */
 export function isAgeBlocked(): boolean {
   if (typeof window === "undefined") return false;
   try {
