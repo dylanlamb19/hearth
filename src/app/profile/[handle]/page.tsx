@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
 import { ProfileCover } from "@/components/ProfileCover";
 import { AboutCard } from "@/components/AboutCard";
+import { ProfilePhotos } from "@/components/ProfilePhotos";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
 import { personByHandle, posts, resolveHandle } from "@/data/seed";
@@ -89,6 +90,8 @@ export default function PublicProfilePage() {
           </div>
         </div>
       </section>
+
+      <ProfilePhotos uid={profile.id} isOwner={isOwnProfile} />
 
       <div className="mt-6 space-y-4">
         <h2 className="font-medium text-ink-900">Moments</h2>
