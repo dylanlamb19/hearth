@@ -1,5 +1,6 @@
 "use client";
 
+import { useJustBlocked } from "@/lib/blockedNow";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
@@ -29,6 +30,7 @@ export function CommentsSection({
   onCount?: (n: number) => void;
 }) {
   const { user } = useAuth();
+  const justBlocked = useJustBlocked();
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [draft, setDraft] = useState("");
   // Inline reply box: which top-level comment it sits under, and whose name is in the placeholder.
@@ -170,7 +172,7 @@ export function CommentsSection({
     });
   }
 
-  const all = comments ?? [];
+  const all = (comments ?? []).filter((c) => !c.authorId || !justBlocked.gone.has(c.authorId));
   const tops = all.filter((c) => !c.parentId);
   const repliesOf = (id: string) => all.filter((c) => c.parentId === id);
 
@@ -182,7 +184,13 @@ export function CommentsSection({
     const isMine = Boolean(user && c.authorId === user.id);
     const canDelete = Boolean(user && (isMine || momentAuthorId === user.id));
     return (
-      <div className={cn("flex items-start gap-2", pending && "opacity-60")}>
+      <div
+        className={cn(
+          "flex items-start gap-2 transition-opacity duration-300",
+          pending && "opacity-60",
+          c.authorId && justBlocked.fading.has(c.authorId) && "opacity-0",
+        )}
+      >
         <Avatar name={c.authorName || "Hearth member"} size={isReply ? "xs" : "sm"} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink-900">{c.authorName}</p>
