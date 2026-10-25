@@ -6,7 +6,7 @@ import { Check, X } from "lucide-react";
 import { markFindPeoplePending } from "@/lib/notificationPermission";
 import { useAuth } from "./AuthProvider";
 import { InviteSheet } from "./InviteSheet";
-import { PEOPLE_GOAL, getProgress, stepDone, type SettleProgress, type SettleStep } from "@/lib/settleIn";
+import { getProgress, peopleLabel, peopleTarget, stepDone, type SettleProgress, type SettleStep } from "@/lib/settleIn";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "hearth_checklist";
@@ -14,7 +14,7 @@ const STORAGE_KEY = "hearth_checklist";
 /** Mirrors the 3 Settle-in steps from /welcome until all are done, then goes away for good. */
 const items: { step: SettleStep; href: string; label: string; notifyPending?: boolean }[] = [
   { step: "photo", href: "/welcome", label: "Add a photo" },
-  { step: "people", href: "/people", label: `Knock on ${PEOPLE_GOAL} doors`, notifyPending: true },
+  { step: "people", href: "/people", label: "Knock on 3 doors", notifyPending: true },
   { step: "moment", href: "/home?compose=1", label: "Share a first Moment" },
 ];
 
@@ -79,15 +79,16 @@ export function OnboardingChecklist() {
         <ul className="mt-4 space-y-2">
           {items.map((item) => {
             const done = stepDone(progress, item.step);
+            const base = item.step === "people" ? peopleLabel(progress) : item.label;
             const label =
-              item.step === "people" && !done
-                ? `${item.label} (${progress.knocked.length}/${PEOPLE_GOAL})`
-                : item.label;
+              item.step === "people" && !done && peopleTarget(progress) > 0
+                ? `${base} (${Math.min(progress.knocked.length, peopleTarget(progress))}/${peopleTarget(progress)})`
+                : base;
             return (
               <li key={item.step}>
                 {done ? (
                   <div className="flex items-center justify-between rounded-2xl bg-cream-50 px-3 py-2.5 text-sm text-ink-400 ring-1 ring-ink-100">
-                    <span className="line-through decoration-ink-300">{item.label}</span>
+                    <span className="line-through decoration-ink-300">{base}</span>
                     <Check className="h-4 w-4 text-ember-glow" aria-label="Done" />
                   </div>
                 ) : (
