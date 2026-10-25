@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/adminGate";
 import { ConfirmSubmit } from "./ConfirmSubmit";
+import { LetterReports } from "./LetterReports";
 import { removeComment, removeMoment, resolveFlaggedAccount, resolveUserReports, restoreComment, restoreMoment } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -195,6 +196,7 @@ export default async function AdminReportsPage() {
           </ul>
         )}
       </section>
+      <LetterReports admin={admin} />
     </main>
   );
 }
