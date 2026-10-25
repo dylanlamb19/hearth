@@ -5,6 +5,7 @@ import { MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
+import { SampleBadge, SampleNotice } from "@/components/SampleLabel";
 import { conversations, personById } from "@/data/seed";
 
 export default function MessagesPage() {
@@ -18,6 +19,7 @@ export default function MessagesPage() {
       <div className="mb-6">
         <h1 className="font-display text-3xl text-ink-900">Messages</h1>
         <p className="mt-1 text-sm text-ink-500">One conversation at a time. No rooms.</p>
+        <SampleNotice feature="Letters">Nothing you type here is sent.</SampleNotice>
       </div>
 
       {conversations.length === 0 ? (
@@ -43,9 +45,10 @@ export default function MessagesPage() {
                 >
                   <Avatar name={p.name} online={p.online} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
-                      <span className="text-[11px] text-ink-400">{c.updatedAt}</span>
+                      <SampleBadge />
+                      <span className="ml-auto text-[11px] text-ink-400">{c.updatedAt}</span>
                     </div>
                     <p className="truncate text-xs text-ink-500">{c.preview}</p>
                   </div>
@@ -58,7 +61,10 @@ export default function MessagesPage() {
             <div className="flex items-center gap-3 border-b border-ink-100 px-4 py-3">
               {peer && <Avatar name={peer.name} size="sm" online={peer.online} />}
               <div>
-                <p className="font-medium text-ink-900">{peer?.name}</p>
+                <p className="flex items-center gap-2 font-medium text-ink-900">
+                  {peer?.name}
+                  <SampleBadge />
+                </p>
                 <p className="text-xs text-ink-400">One-to-one · private</p>
               </div>
             </div>
@@ -72,8 +78,10 @@ export default function MessagesPage() {
             </div>
             <form className="border-t border-ink-100 p-3" onSubmit={(e) => e.preventDefault()}>
               <input
-                placeholder="Write a quiet reply…"
-                className="w-full rounded-full border-ink-200 bg-cream-50 px-4 py-3 text-sm focus:border-ember-400 focus:ring-ember-300"
+                disabled
+                aria-label="Letters are coming soon"
+                placeholder="Letters are coming soon"
+                className="w-full cursor-not-allowed rounded-full border-ink-200 bg-cream-100 px-4 py-3 text-sm text-ink-500 placeholder:text-ink-500"
               />
             </form>
           </div>
