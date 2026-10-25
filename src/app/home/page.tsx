@@ -12,6 +12,7 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { useAuth } from "@/components/AuthProvider";
 import { posts as seedPosts, people, Post } from "@/data/seed";
 import { getBlockedIds } from "@/lib/blocked";
+import { useJustBlocked } from "@/lib/blockedNow";
 import {
   createMoment,
   deleteMoment,
@@ -202,6 +203,8 @@ export default function HomePage() {
 
   // Re-read localStorage block list each render (free-tier, this device).
   const blockedIds = new Set(getBlockedIds());
+  // Blocked just now: fade their Moments (pins included) out, then drop them. No reload.
+  const justBlocked = useJustBlocked();
   // Reported Moments disappear right away for the reporter (this device).
   // The device-only block list only applies in demo mode; with real keys the server
   // (can_see_moment) already drops anything across a block.
@@ -210,6 +213,7 @@ export default function HomePage() {
   const visibleFeed = feed.filter(
     (post) =>
       (mode === "supabase" || !blockedIds.has(post.authorId)) &&
+      !justBlocked.gone.has(post.authorId) &&
       !reportedIds.includes(post.id) &&
       post.id !== topPost?.id,
   );
@@ -402,7 +406,12 @@ export default function HomePage() {
 
   function renderCard(post: Post, slot: "pin" | "list") {
     return (
-      <div key={`${slot}-${post.id}`} ref={seenRef(post.id)} data-moment={post.id}>
+      <div
+        key={`${slot}-${post.id}`}
+        ref={seenRef(post.id)}
+        data-moment={post.id}
+        className={cn("transition-opacity duration-300", justBlocked.fading.has(post.authorId) && "opacity-0")}
+      >
         <PostCard
           post={post}
           onEdit={async (id, body) => {
