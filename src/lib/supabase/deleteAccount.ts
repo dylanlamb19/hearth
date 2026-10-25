@@ -1,3 +1,4 @@
+import { getPaymentsAdapter } from "@/lib/supporter/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { MEDIA_BUCKET } from "@/lib/mediaLimits";
 import { COVER_BUCKET } from "@/lib/coverLimits";
@@ -42,6 +43,16 @@ export async function removeUserMedia(admin: SupabaseClient, userId: string, buc
  * untracked and unattached, so the daily cleanup sweep removes them.
  */
 export async function deleteAccount(admin: SupabaseClient, userId: string): Promise<void> {
+  // Stop any Supporter billing before the row cascades away (the subscription id lives there).
+  try {
+    const { data } = await admin.from("supporters").select("stripe_subscription_id").eq("user_id", userId).maybeSingle();
+    if (data?.stripe_subscription_id) {
+      const r = await getPaymentsAdapter().cancelNow(data.stripe_subscription_id);
+      if (!r.ok) console.error("[hearth] supporter subscription NOT cancelled on account delete; cancel it in Stripe", { userId, subscription: data.stripe_subscription_id });
+    }
+  } catch (e) {
+    console.error("[hearth] supporter lookup failed on account delete", { userId, error: (e as Error).message });
+  }
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) throw new Error(`delete user failed: ${error.message}`);
   for (const bucket of [MEDIA_BUCKET, COVER_BUCKET]) {
