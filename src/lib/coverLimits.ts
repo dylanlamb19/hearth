@@ -8,4 +8,5 @@ export const COVER_HEIGHT = 500;
 /** About limits. */
 export const BIO_MAX = 160;
 export const CITY_MAX = 60;
+export const COVER_ALT_MAX = 120;
 export type AboutVisibility = "friends" | "everyone";
