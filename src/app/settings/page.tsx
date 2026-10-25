@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Ban, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { SupporterSettingsRow } from "@/components/SupporterPerks";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/components/AuthProvider";
@@ -147,6 +148,7 @@ export default function SettingsPage() {
           {toast}
         </div>
       )}
+      <SupporterSettingsRow />
     </AppShell>
   );
 }
