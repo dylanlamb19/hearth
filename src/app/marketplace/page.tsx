@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { MarketplaceCard } from "@/components/MarketplaceCard";
+import { SampleNotice } from "@/components/SampleLabel";
 import { listings } from "@/data/seed";
 
 export default function MarketplacePage() {
@@ -24,6 +25,7 @@ export default function MarketplacePage() {
             </Link>
           </p>
         </div>
+        <SampleNotice feature="Marketplace">Messaging sellers and reporting listings open when it does.</SampleNotice>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {listings.map((listing) => (

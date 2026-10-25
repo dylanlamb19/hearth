@@ -3,13 +3,14 @@ import { ShieldCheck } from "lucide-react";
 import { Listing, personById } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
-import { ReportMenu } from "./ReportMenu";
+import { SampleBadge } from "./SampleLabel";
 
 export function MarketplaceCard({ listing }: { listing: Listing }) {
   const seller = personById(listing.sellerId);
   return (
     <article className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card">
       <div className="relative aspect-[4/3] bg-cream-200">
+        <SampleBadge className="absolute left-3 top-3 z-10" />
         <Image
           src={listing.image}
           alt={listing.title}
@@ -25,7 +26,12 @@ export function MarketplaceCard({ listing }: { listing: Listing }) {
             <h3 className="font-medium text-ink-900">{listing.title}</h3>
             <p className="mt-1 text-lg font-semibold text-ember-600">${listing.price}</p>
           </div>
-          <ReportMenu subject={seller?.name ?? listing.title} subjectId={listing.sellerId} />
+          <span
+            className="shrink-0 rounded-full px-2 py-1 text-[11px] text-ink-400"
+            title="Reporting opens when Marketplace does"
+          >
+            Report · coming soon
+          </span>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-500">
           <span className="rounded-full bg-cream-200 px-2.5 py-1 text-ink-700">{listing.condition}</span>
@@ -45,8 +51,8 @@ export function MarketplaceCard({ listing }: { listing: Listing }) {
           </div>
         )}
         <div className="mt-4">
-          <Button variant="secondary" href="/messages" className="w-full">
-            Message
+          <Button variant="secondary" disabled aria-label="Messaging sellers is coming soon" className="w-full cursor-not-allowed">
+            Message · Coming soon
           </Button>
         </div>
         <div className="mt-3 flex items-start gap-2 rounded-2xl bg-cream-100 px-3 py-2.5 text-xs text-ink-600">
