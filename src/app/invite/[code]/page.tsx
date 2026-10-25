@@ -15,10 +15,10 @@ export default function InviteLandingPage() {
     <div className="min-h-screen bg-cream-100">
       <PublicHeader />
       <main className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center sm:py-24">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">You're invited</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">You’re invited</p>
         <h1 className="mt-3 font-display text-4xl text-ink-900 text-balance">Someone saved you a seat</h1>
         <p className="mt-4 text-lg leading-relaxed text-ink-600 text-balance">
-          Hearth is a quieter place for people you already know. Come in when you're ready — no rush.
+          Hearth is a quieter place for people you already know. Come in when you’re ready — no rush.
         </p>
         {code ? (
           <p className="mt-3 text-xs text-ink-400">
