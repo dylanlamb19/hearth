@@ -56,10 +56,10 @@ export default function PublicProfilePage() {
       <section className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card">
         <ProfileCover uid={profile.id} name={profile.name} isOwner={isOwnProfile} />
         <div className="relative px-5 pb-5">
-          <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
+          <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
-              <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={profile.name} size="xl" src={avatarSrc} />
+              <div className="rounded-full bg-cream-50 shadow-soft ring-4 ring-cream-50">
+                <Avatar name={profile.name} size="2xl" src={avatarSrc} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{profile.name}</h1>

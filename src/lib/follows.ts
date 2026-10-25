@@ -82,8 +82,14 @@ export async function followCounts(userId: string, demoFallback: string[] = []):
 export async function listPeople(): Promise<Person[]> {
   const sb = getSupabaseBrowserClient();
   if (!sb) return people;
-  const { data, error } = await sb.from("profiles").select("id, name, handle, bio").limit(100);
-  if (error) throw new Error(error.message);
+  // list_people (0013) applies each person's bio setting and leaves out blocked people.
+  const rpc = await sb.rpc("list_people", { max_rows: 100 });
+  let data = rpc.data as { id: string; name: string | null; handle: string | null; bio: string | null }[] | null;
+  if (rpc.error) {
+    const fallback = await sb.from("profiles").select("id, name, handle").limit(100);
+    if (fallback.error) throw new Error(fallback.error.message);
+    data = (fallback.data ?? []).map((r) => ({ ...r, bio: null }));
+  }
   return (data ?? []).map((r: { id: string; name: string | null; handle: string | null; bio: string | null }) => ({
     id: r.id,
     name: r.name || "Hearth member",
