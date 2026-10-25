@@ -69,12 +69,23 @@ function clearCookie(name: string) {
   document.cookie = name + "=; path=/; max-age=0; SameSite=Lax";
 }
 
-function friendlyError(message: string) {
+/** Calm, plain copy for auth errors. Never shows raw backend text. */
+function friendlyError(message: string, status?: number) {
   const m = message.toLowerCase();
+  if (status === 429 || m.includes("rate limit") || m.includes("too many")) {
+    return "Lots of people are settling in right now. Try again in a few minutes.";
+  }
   if (m.includes("invalid login")) return "That email and password don't match. Try again?";
-  if (m.includes("already registered")) return "There's already an account with that email. Sign in instead?";
+  if (m.includes("already registered") || m.includes("already been registered")) {
+    return "There's already an account with that email. Sign in instead?";
+  }
   if (m.includes("email not confirmed")) return "Check your inbox to confirm your email, then sign in.";
-  return message;
+  if (m.includes("password")) return "That password won't work here. Try a longer one, at least 8 characters.";
+  if (m.includes("email") && (m.includes("invalid") || m.includes("valid"))) {
+    return "That email address doesn't look quite right. Mind checking it?";
+  }
+  if (m.includes("fetch") || m.includes("network")) return "We couldn't reach Hearth just now. Check your connection and try again.";
+  return "Something went wrong on our side. Try again in a moment.";
 }
 
 /** Demo cookie session — only when Supabase isn't configured, and only for ember@hearth.demo. */
@@ -152,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { user: next };
       }
       const { data, error } = await sb.auth.signInWithPassword({ email: normalized, password });
-      if (error || !data.user) return { user: null, error: friendlyError(error?.message ?? "Could not sign in.") };
+      if (error || !data.user) return { user: null, error: friendlyError(error?.message ?? "", error?.status) };
       clearCookie(AUTH_COOKIE);
       const row = await fetchProfile(sb, data.user.id);
       const next = profileToSessionUser(data.user, row);
@@ -184,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error.message.includes(AGE_BLOCK_ERROR)) {
           return { user: null, ageBlocked: true };
         }
-        return { user: null, error: friendlyError(error.message) };
+        return { user: null, error: friendlyError(error.message, error.status) };
       }
       if (!data.session || !data.user) return { user: null, needsEmailConfirm: true };
       clearCookie(AUTH_COOKIE);

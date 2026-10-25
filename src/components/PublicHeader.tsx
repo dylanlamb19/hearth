@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
-import { Button } from "./Button";
 
 export function PublicHeader() {
   return (
@@ -11,7 +10,12 @@ export function PublicHeader() {
         <Link href="/pricing" className="hover:text-ink-900">Pricing</Link>
         <Link href="/help" className="hover:text-ink-900">Help</Link>
       </nav>
-      <Button href="/login" variant="primary">Sign in</Button>
+      <Link
+        href="/login"
+        className="rounded-full px-3 py-1.5 text-sm font-medium text-ink-700 underline-offset-4 hover:text-ink-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-300"
+      >
+        Sign in
+      </Link>
     </header>
   );
 }
