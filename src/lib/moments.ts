@@ -79,6 +79,18 @@ export async function listMoments(): Promise<MomentList> {
     : { moments: await withUrls(rows), hasReal: false };
 }
 
+/** True if this person has at least one live Moment. Demo mode has no history, so false. */
+export async function hasPostedMoment(uid: string): Promise<boolean> {
+  const sb = getSupabaseBrowserClient();
+  if (!sb) return false;
+  const { count, error } = await sb
+    .from("moments")
+    .select("id", { count: "exact", head: true })
+    .eq("author_id", uid)
+    .is("deleted_at", null);
+  return !error && (count ?? 0) > 0;
+}
+
 export async function createMoment(input: NewMoment): Promise<Post> {
   const sb = getSupabaseBrowserClient();
   if (sb) {
