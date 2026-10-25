@@ -6,7 +6,8 @@
  * with or without Supabase keys and needs no new tables.
  */
 export type SettleStep = "photo" | "people" | "moment";
-export type SettleProgress = { photo: boolean; knocked: string[]; moment: boolean; done: boolean };
+/** `target` is min(3, people available besides you); unset means the full 3. */
+export type SettleProgress = { photo: boolean; knocked: string[]; moment: boolean; done: boolean; target?: number };
 
 export const PEOPLE_GOAL = 3;
 export const PROMPTS = [
@@ -48,7 +49,7 @@ export function getProgress(uid: string): SettleProgress {
 export function updateProgress(uid: string, patch: Partial<SettleProgress>): SettleProgress {
   const next = { ...getProgress(uid), ...patch };
   // Once all three are done the checklist goes away for good.
-  if (next.photo && next.knocked.length >= PEOPLE_GOAL && next.moment) next.done = true;
+  if (next.photo && stepDone(next, "people") && next.moment) next.done = true;
   write(key(uid), next);
   window.dispatchEvent(new Event("hearth:settle-in"));
   return next;
@@ -56,8 +57,33 @@ export function updateProgress(uid: string, patch: Partial<SettleProgress>): Set
 
 export function stepDone(p: SettleProgress, step: SettleStep): boolean {
   if (step === "photo") return p.photo;
-  if (step === "people") return p.knocked.length >= PEOPLE_GOAL;
+  if (step === "people") return p.knocked.length >= peopleTarget(p);
   return p.moment;
+}
+
+/** How many knocks finish the step: min(3, people available besides you). */
+export function peopleTarget(p: SettleProgress): number {
+  return Math.min(PEOPLE_GOAL, p.target ?? PEOPLE_GOAL);
+}
+
+/** Label for the knock step (Glow): the full 3, or "a few" when fewer people are here. */
+export function peopleLabel(p: SettleProgress): string {
+  return peopleTarget(p) < PEOPLE_GOAL ? "Knock on a few doors" : `Knock on ${PEOPLE_GOAL} doors`;
+}
+
+const PHOTO_CARD_KEY = (uid: string) => `hearth_photo_card_dismissed:${uid}`;
+
+/** The soft "Add a photo" card on Home after a skipped photo step; dismissal is remembered. */
+export function photoCardDismissed(uid: string): boolean {
+  try {
+    return localStorage.getItem(PHOTO_CARD_KEY(uid)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function dismissPhotoCard(uid: string) {
+  write(PHOTO_CARD_KEY(uid), "1");
 }
 
 /** Rotating prompt: a new one each time the composer opens, steady within a render. */

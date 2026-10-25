@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Camera } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
+import { InviteSheet } from "@/components/InviteSheet";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/components/AuthProvider";
 import { AudienceChip, type Audience } from "@/components/feed/AudienceChip";
@@ -60,6 +61,8 @@ export default function WelcomePage() {
   const [handle, setHandle] = useState("");
   const [handleReady, setHandleReady] = useState(false);
   const [roster, setRoster] = useState<Person[]>([]);
+  const [rosterLoaded, setRosterLoaded] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [knocked, setKnocked] = useState<string[]>([]);
   const [knockError, setKnockError] = useState("");
   const [draft, setDraft] = useState("");
@@ -94,7 +97,11 @@ export default function WelcomePage() {
     let live = true;
     listPeople()
       .catch(() => people)
-      .then((list) => live && setRoster(list));
+      .then((list) => {
+        if (!live) return;
+        setRoster(list);
+        setRosterLoaded(true);
+      });
     return () => {
       live = false;
     };
@@ -106,6 +113,16 @@ export default function WelcomePage() {
     const first = inviter ? others.filter((p) => key(p) === inviter) : [];
     return [...first, ...others.filter((p) => !first.includes(p))].slice(0, 6);
   }, [roster, user?.id]);
+  // Glow: the knock target is min(3, people here besides you), so a small room can still finish.
+  const available = useMemo(
+    () => roster.filter((p) => p.id !== user?.id && p.id !== "u-ember").length,
+    [roster, user?.id],
+  );
+  const target = Math.min(PEOPLE_GOAL, available);
+  useEffect(() => {
+    if (!user || !rosterLoaded) return;
+    if (getProgress(user.id).target !== target) updateProgress(user.id, { target });
+  }, [user, rosterLoaded, target]);
 
   const effectiveHandle = normalizeHandle(handle);
   const [remoteTaken, setRemoteTaken] = useState<{ handle: string; taken: boolean } | null>(null);
@@ -155,6 +172,8 @@ export default function WelcomePage() {
   function finish(goHome = true) {
     const safeHandle = !handleInvalid && effectiveHandle ? effectiveHandle : me.handle || handleFromName(me.name);
     completeOnboarding({ handle: safeHandle });
+    // Finishing Settle in retires the checklist; a skipped photo comes back as one soft card on Home.
+    updateProgress(me.id, { done: true });
     if (goHome) router.push("/home");
   }
 
@@ -201,7 +220,8 @@ export default function WelcomePage() {
       updateProgress(me.id, { moment: true });
       setSettled(true);
       finish(false);
-      setTimeout(() => router.push("/home"), 1600);
+      // /welcome unmounts on redirect, so Home shows the toast (it reads ?first=1).
+      setTimeout(() => router.push("/home?first=1"), 1600);
     } catch (e) {
       setShareError((e as Error).message || "Couldn’t share that — try again.");
       setSharing(false);
@@ -307,27 +327,35 @@ export default function WelcomePage() {
                   </span>
                 </label>
                 <div className="flex flex-col gap-2 pt-1">
-                  <Button
-                    type="button"
-                    className="w-full"
-                    disabled={handleInvalid}
-                    onClick={() => {
-                      saveHandle();
-                      setStep(1);
-                    }}
-                  >
-                    Continue
-                  </Button>
-                  <button
-                    type="button"
-                    className="text-sm text-ink-500 hover:text-ink-800"
-                    onClick={() => {
-                      saveHandle();
-                      setStep(1);
-                    }}
-                  >
-                    Later
-                  </button>
+                  {avatar ? (
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={handleInvalid}
+                      onClick={() => {
+                        saveHandle();
+                        setStep(1);
+                      }}
+                    >
+                      Continue
+                    </Button>
+                  ) : (
+                    <>
+                      <Button type="button" className="w-full" onClick={() => photoInput.current?.click()}>
+                        Add a photo
+                      </Button>
+                      <button
+                        type="button"
+                        className="text-sm text-ink-500 hover:text-ink-800"
+                        onClick={() => {
+                          saveHandle();
+                          setStep(1);
+                        }}
+                      >
+                        Skip for now
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -335,11 +363,14 @@ export default function WelcomePage() {
             {step === 1 && (
               <div className="space-y-4 text-center">
                 <p className="text-sm text-ink-500">
-                  Knock on {PEOPLE_GOAL} doors. They’ll let you in when they’re ready.
+                  {target < PEOPLE_GOAL ? "Knock on a few doors." : `Knock on ${PEOPLE_GOAL} doors.`} They’ll let you in
+                  when they’re ready.
                 </p>
-                <p className="text-xs text-ink-400">
-                  {Math.min(knocked.length, PEOPLE_GOAL)} of {PEOPLE_GOAL}
-                </p>
+                {target > 0 && (
+                  <p className="text-xs text-ink-400">
+                    {Math.min(knocked.length, target)} of {target}
+                  </p>
+                )}
                 <ul className="max-h-72 space-y-2 overflow-y-auto text-left">
                   {suggestions.map((p) => {
                     const done = knocked.includes(p.id);
@@ -368,7 +399,14 @@ export default function WelcomePage() {
                   })}
                   {suggestions.length === 0 && (
                     <li className="rounded-2xl bg-cream-50 px-3 py-4 text-center text-sm text-ink-500">
-                      Nobody here yet. Invite someone from Home.
+                      No one else is here yet.{" "}
+                      <button
+                        type="button"
+                        onClick={() => setInviteOpen(true)}
+                        className="font-medium text-ember-700 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-300"
+                      >
+                        Invite someone in.
+                      </button>
                     </li>
                   )}
                 </ul>
@@ -425,6 +463,7 @@ export default function WelcomePage() {
           </>
         )}
       </div>
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   );
 }

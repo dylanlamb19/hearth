@@ -40,6 +40,9 @@ import {
   pickPrompt,
   shouldNudge,
   takeFirstMoment,
+  dismissPhotoCard,
+  getProgress,
+  photoCardDismissed,
   updateProgress,
 } from "@/lib/settleIn";
 
@@ -312,11 +315,30 @@ export default function HomePage() {
     });
   }
 
-  function showToast(message: string) {
+  function showToast(message: string, ms = 2800) {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2800);
+    toastTimer.current = setTimeout(() => setToast(null), ms);
   }
+
+  // First Moment from /welcome: that page unmounts on redirect, so its toast is shown here
+  // (Glow: this copy replaces "Shared to the hearth." for this one only), then the flag is dropped.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("first") !== "1") return;
+    showToast("Your first Moment is by the fire.", 4000);
+    params.delete("first");
+    const qs = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+  }, []);
+
+  // A skipped photo step comes back once as a soft card after Settle in is finished.
+  const [photoCard, setPhotoCard] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    const p = getProgress(user.id);
+    setPhotoCard(p.done && !p.photo && !photoCardDismissed(user.id));
+  }, [user]);
 
   function handleMediaPick(
     files: FileList | null,
@@ -465,6 +487,24 @@ export default function HomePage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-4">
           <OnboardingChecklist />
+          {photoCard && user && (
+            <div className="relative flex items-center gap-3 rounded-3xl bg-cream-50 p-4 pr-10 ring-1 ring-cream-200">
+              <Link href="/welcome" className="text-sm text-ink-700 hover:text-ink-900">
+                Add a photo so friends recognize you.
+              </Link>
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => {
+                  dismissPhotoCard(user.id);
+                  setPhotoCard(false);
+                }}
+                className="absolute right-3 top-3 rounded-full p-1 text-ink-400 hover:text-ink-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {nudgePost && user && (
             <section className="flex items-center gap-3 rounded-3xl bg-cream-50 p-4 ring-1 ring-cream-200">
