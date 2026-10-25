@@ -260,7 +260,7 @@ export default function WelcomePage() {
 
         {settled ? (
           <div className="space-y-3 py-6 text-center" role="status">
-            <h1 className="font-display text-3xl text-ink-900">Your first Moment is by the fire.</h1>
+            <h1 className="font-display text-3xl text-ink-900">You’re settled in.</h1>
             <p className="text-sm text-ink-500">Taking you home…</p>
           </div>
         ) : (
