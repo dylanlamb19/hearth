@@ -10,5 +10,3 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Decoded from *.b64 by scripts/decode-assets.mjs
-public/landing/*.webp
