@@ -12,6 +12,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { AudienceChip, type Audience } from "@/components/feed/AudienceChip";
 import { people, type Person } from "@/data/seed";
 import { listPeople } from "@/lib/follows";
+import { isServerCode, resolveInvite } from "@/lib/invite";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { sendKnock } from "@/lib/knocks";
 import { createMoment } from "@/lib/moments";
 import { uploadAvatar, useAvatarSrc } from "@/lib/avatar";
@@ -19,6 +21,7 @@ import {
   PEOPLE_GOAL,
   getProgress,
   pendingInviteBase,
+  pendingInviteCode,
   pickPrompt,
   setFirstMoment,
   updateProgress,
@@ -106,18 +109,41 @@ export default function WelcomePage() {
       live = false;
     };
   }, []);
+  // Invite links (0014) never auto-friend: the inviter is offered first with "Let in" ready, and
+  // only the new person's tap sends the knock. Blocked or expired invites resolve to nothing.
+  const [inviter, setInviter] = useState<Person | null>(null);
+  useEffect(() => {
+    const code = pendingInviteCode();
+    if (!code || !isServerCode(code)) return;
+    let live = true;
+    resolveInvite(getSupabaseBrowserClient(), code).then((inv) => {
+      if (!live || inv.status !== "ok" || !inv.inviterId) return;
+      setInviter({ id: inv.inviterId, name: inv.displayName, handle: "", bio: "", mutuals: 0 });
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   const suggestions = useMemo(() => {
-    const inviter = pendingInviteBase();
     const others = roster.filter((p) => p.id !== user?.id && p.id !== "u-ember");
+    if (inviter && inviter.id !== user?.id) {
+      const fromRoster = others.find((p) => p.id === inviter.id);
+      const first = fromRoster ?? inviter;
+      return [first, ...others.filter((p) => p.id !== first.id)].slice(0, 6);
+    }
+    // Demo mode: local codes start with the inviter's handle.
+    const base = pendingInviteBase();
     const key = (p: Person) => (p.handle || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
-    const first = inviter ? others.filter((p) => key(p) === inviter) : [];
+    const first = base ? others.filter((p) => key(p) === base) : [];
     return [...first, ...others.filter((p) => !first.includes(p))].slice(0, 6);
-  }, [roster, user?.id]);
+  }, [roster, user?.id, inviter]);
   // Glow: the knock target is min(3, people here besides you), so a small room can still finish.
-  const available = useMemo(
-    () => roster.filter((p) => p.id !== user?.id && p.id !== "u-ember").length,
-    [roster, user?.id],
-  );
+  // The inviter always counts, even if they aren't in the first page of profiles.
+  const available = useMemo(() => {
+    const others = roster.filter((p) => p.id !== user?.id && p.id !== "u-ember");
+    const extra = inviter && inviter.id !== user?.id && !others.some((p) => p.id === inviter.id) ? 1 : 0;
+    return others.length + extra;
+  }, [roster, user?.id, inviter]);
   const target = Math.min(PEOPLE_GOAL, available);
   useEffect(() => {
     if (!user || !rosterLoaded) return;
@@ -374,12 +400,17 @@ export default function WelcomePage() {
                 <ul className="max-h-72 space-y-2 overflow-y-auto text-left">
                   {suggestions.map((p) => {
                     const done = knocked.includes(p.id);
+                    const isInviter = inviter?.id === p.id;
                     return (
                       <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white px-3 py-2.5">
                         <Avatar name={p.name} size="sm" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
-                          {p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>}
+                          {isInviter ? (
+                            <p className="truncate text-xs text-ink-400">Invited you</p>
+                          ) : (
+                            p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -392,7 +423,7 @@ export default function WelcomePage() {
                               : "text-ember-700 ring-1 ring-ember-glow hover:bg-ember-50",
                           )}
                         >
-                          {done ? "Knocked" : "Knock"}
+                          {done ? "Knocked" : isInviter ? "Let in" : "Knock"}
                         </button>
                       </li>
                     );
