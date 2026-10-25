@@ -8,6 +8,8 @@ import { Avatar } from "@/components/Avatar";
 import { useAvatarSrc } from "@/lib/avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
+import { ProfileCover } from "@/components/ProfileCover";
+import { AboutCard } from "@/components/AboutCard";
 import { ReportMenu } from "@/components/ReportMenu";
 import { useAuth } from "@/components/AuthProvider";
 import { personByHandle, posts, resolveHandle } from "@/data/seed";
@@ -52,12 +54,12 @@ export default function PublicProfilePage() {
   return (
     <AppShell>
       <section className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card">
-        <div className="h-36 bg-gradient-to-r from-cream-300 via-ember-100 to-cream-200" />
+        <ProfileCover uid={profile.id} name={profile.name} isOwner={isOwnProfile} />
         <div className="relative px-5 pb-5">
-          <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
+          <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
-              <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={profile.name} size="xl" src={avatarSrc} />
+              <div className="rounded-full bg-cream-50 shadow-soft ring-4 ring-cream-50">
+                <Avatar name={profile.name} size="2xl" src={avatarSrc} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{profile.name}</h1>
@@ -77,7 +79,7 @@ export default function PublicProfilePage() {
               )}
             </div>
           </div>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-600">{profile.bio}</p>
+          <AboutCard uid={profile.id} isOwner={isOwnProfile} fallback={{ bio: profile.bio }} />
           <div className="mt-4 rounded-2xl bg-cream-100 px-4 py-3 text-xs text-ink-600">
             Privacy: profiles are visible to friends. Use report and block anytime. Read more in our{" "}
             <a href="/privacy" className="underline underline-offset-2">

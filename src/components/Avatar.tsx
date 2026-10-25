@@ -18,11 +18,11 @@ export function Avatar({
   name: string;
   /** Optional photo (e.g. the device-local Settle-in avatar). Falls back to initials. */
   src?: string | null;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   online?: boolean;
   className?: string;
 }) {
-  const sizes = { xs: "h-6 w-6 text-[10px]", sm: "h-8 w-8 text-xs", md: "h-10 w-10 text-sm", lg: "h-12 w-12 text-base", xl: "h-16 w-16 text-lg" };
+  const sizes = { xs: "h-6 w-6 text-[10px]", sm: "h-8 w-8 text-xs", md: "h-10 w-10 text-sm", lg: "h-12 w-12 text-base", xl: "h-16 w-16 text-lg", "2xl": "h-24 w-24 text-2xl" };
   const color = palette[name.length % palette.length];
   return (
     <div className={cn("relative inline-flex shrink-0", className)}>

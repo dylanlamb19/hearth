@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { MEDIA_BUCKET } from "@/lib/mediaLimits";
+import { COVER_BUCKET } from "@/lib/coverLimits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,9 +19,9 @@ function authorized(request: NextRequest): boolean {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-async function removeFiles(admin: SupabaseClient, paths: string[], label: string): Promise<boolean> {
+async function removeFiles(admin: SupabaseClient, paths: string[], label: string, bucket = MEDIA_BUCKET): Promise<boolean> {
   if (paths.length === 0) return true;
-  const { error } = await admin.storage.from(MEDIA_BUCKET).remove(paths);
+  const { error } = await admin.storage.from(bucket).remove(paths);
   if (error) console.error(`[hearth] ${label} removal failed`, { count: paths.length, error: error.message });
   return !error;
 }
@@ -31,6 +32,7 @@ async function removeFiles(admin: SupabaseClient, paths: string[], label: string
  *    exactly those files. On failure the rows are put back so the next run retries.
  * 2) Sweep a bounded batch of untracked bucket files older than 24h that no live Moment uses
  *    (files from before upload tracking existed).
+ * 3) Remove cover files older than 24h that no profile points at (failed saves, takedowns).
  */
 export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -63,6 +65,14 @@ export async function GET(request: NextRequest) {
   } else {
     const sweepPaths = ((untracked ?? []) as string[]).filter(Boolean);
     if (await removeFiles(admin, sweepPaths, "untracked")) removed += sweepPaths.length;
+  }
+
+  const { data: covers, error: coverError } = await admin.rpc("find_orphan_covers", { max_rows: SWEEP_BATCH });
+  if (coverError) {
+    console.error("[hearth] orphan cover sweep failed", { error: coverError.message });
+  } else {
+    const coverPaths = ((covers ?? []) as string[]).filter(Boolean);
+    if (await removeFiles(admin, coverPaths, "orphan cover", COVER_BUCKET)) removed += coverPaths.length;
   }
 
   return NextResponse.json({ removed });

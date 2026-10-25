@@ -5,8 +5,9 @@ import { Ban, Bell, Flag, Plus, Settings, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { useAvatarSrc } from "@/lib/avatar";
-import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
+import { ProfileCover } from "@/components/ProfileCover";
+import { AboutCard } from "@/components/AboutCard";
 import { ReportMenu } from "@/components/ReportMenu";
 import { PostCard } from "@/components/PostCard";
 import { useAuth } from "@/components/AuthProvider";
@@ -32,12 +33,12 @@ export default function ProfilePage() {
   return (
     <AppShell>
       <section className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card">
-        <div className="h-36 bg-gradient-to-r from-cream-300 via-ember-100 to-cream-200" />
+        <ProfileCover uid={user?.id} name={user?.name || "You"} isOwner={isOwnProfile} />
         <div className="relative px-5 pb-5">
-          <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
+          <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
-              <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={user?.name || "You"} size="xl" src={avatarSrc} />
+              <div className="rounded-full bg-cream-50 shadow-soft ring-4 ring-cream-50">
+                <Avatar name={user?.name || "You"} size="2xl" src={avatarSrc} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>
@@ -60,13 +61,10 @@ export default function ProfilePage() {
                   Share a Moment
                 </Link>
               )}
-              <Button variant="secondary">Edit profile</Button>
               <ReportMenu subject="your profile tools" />
             </div>
           </div>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-600">
-            Keeping the lights low and the kettle on. Friends-only by default. You decide who sits at this table.
-          </p>
+          <AboutCard uid={user?.id} isOwner={isOwnProfile} fallback={{ interests: user?.interests ?? [] }} />
           <div className="mt-4 rounded-2xl bg-cream-100 px-4 py-3 text-xs text-ink-600">
             Privacy: your profile is visible to friends. Use report and block anytime. Read more in our{" "}
             <a href="/privacy" className="underline underline-offset-2">privacy notice</a>.

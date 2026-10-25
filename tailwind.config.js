@@ -13,6 +13,8 @@ module.exports = {
           100: "#f9f7f2",
           200: "#f3efe6",
           300: "#e8e1d4",
+          // Cover gradient start (Glow's spec).
+          cover: "#FBF6EE",
         },
         ember: {
           50: "#fef7f0",

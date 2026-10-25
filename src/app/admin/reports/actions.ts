@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdminSession } from "@/lib/supabase/adminGate";
 import { MEDIA_BUCKET } from "@/lib/mediaLimits";
+import { COVER_BUCKET } from "@/lib/coverLimits";
+import { removeUserMedia } from "@/lib/supabase/deleteAccount";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -139,5 +141,37 @@ export async function resolveUserReports(form: FormData) {
   logDbError("resolve user reports", error, { userId: id });
   if (error) return;
   await audit(admin, adminId, "resolve_user_report", id);
+  revalidatePath("/admin/reports");
+}
+
+/**
+ * Take down a reported person's profile content: clear their cover (and its files), cover alt
+ * text, bio and city. The account itself stays; open person reports are resolved.
+ */
+export async function takeDownProfileContent(form: FormData) {
+  const session = await requireAdminSession();
+  const id = idFrom(form, "userId");
+  if (!session || !id) return;
+  const { admin, adminId } = session;
+  const { error } = await admin
+    .from("profiles")
+    .update({ cover_path: null, cover_alt: null, bio: null, city: null })
+    .eq("id", id);
+  logDbError("take down profile", error, { userId: id });
+  if (error) return;
+  try {
+    await removeUserMedia(admin, id, COVER_BUCKET);
+  } catch (e) {
+    // Unreferenced now, so the daily cover sweep removes anything left.
+    console.error("[hearth] admin cover removal failed", { userId: id, error: (e as Error).message });
+  }
+  const { error: resolveError } = await admin
+    .from("reports")
+    .update({ status: "resolved" })
+    .eq("reported_user_id", id)
+    .is("moment_id", null)
+    .eq("status", "open");
+  logDbError("resolve user reports", resolveError, { userId: id });
+  await audit(admin, adminId, "take_down_profile", id);
   revalidatePath("/admin/reports");
 }

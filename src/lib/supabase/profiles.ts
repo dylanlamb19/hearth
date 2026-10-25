@@ -5,14 +5,15 @@ export type ProfileRow = {
   id: string;
   name: string | null;
   handle: string | null;
-  bio: string | null;
+  /** Not column-readable since 0013 (bio has a Friends/Everyone setting); read via get_profile_about. */
+  bio?: string | null;
   photo_url: string | null;
   interests: string[] | null;
   onboarding_completed_at: string | null;
   created_at: string;
 };
 
-export const PROFILE_COLUMNS = "id, name, handle, bio, photo_url, interests, onboarding_completed_at, created_at";
+export const PROFILE_COLUMNS = "id, name, handle, photo_url, interests, onboarding_completed_at, created_at";
 
 export function profileToSessionUser(authUser: User, row: ProfileRow | null): SessionUser {
   const email = authUser.email ?? "";
