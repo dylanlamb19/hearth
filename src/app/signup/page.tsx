@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { Info } from "lucide-react";
 import { birthYearOptions, isUnderMinAge, setAgeBlocked } from "@/lib/age";
 import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
+import { cn } from "@/lib/utils";
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -18,8 +20,15 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState("");
 
+  /** Inline error under the button; form values stay put and focus returns to the button. */
+  function showError(message: string) {
+    setError(message);
+    requestAnimationFrame(() => document.getElementById("signup-submit")?.focus());
+  }
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy) return;
     const data = new FormData(e.currentTarget);
     const name = String(data.get("name") || "");
     const email = String(data.get("email") || "");
@@ -27,7 +36,7 @@ export default function SignupPage() {
     const terms = data.get("terms") === "on";
     const birthYear = Number(data.get("birthYear") || 0);
     if (!birthYear) {
-      setError("Please choose your birth year.");
+      showError("Please choose your birth year.");
       return;
     }
     if (isUnderMinAge(birthYear)) {
@@ -36,16 +45,21 @@ export default function SignupPage() {
       return;
     }
     if (!terms) {
-      setError("Please agree to the Terms to continue.");
+      showError("Please agree to the Terms to continue.");
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      showError("Password must be at least 8 characters.");
       return;
     }
     setError("");
     setBusy(true);
-    const result = await signup(email, password, name, birthYear);
+    let result: Awaited<ReturnType<typeof signup>>;
+    try {
+      result = await signup(email, password, name, birthYear);
+    } catch {
+      result = { user: null, error: "We couldn’t reach Hearth just now. Check your connection and try again." };
+    }
     setBusy(false);
     if (result.ageBlocked) {
       setAgeBlocked();
@@ -57,7 +71,7 @@ export default function SignupPage() {
       return;
     }
     if (!result.user) {
-      setError(result.error || "Could not create your account. Try again?");
+      showError(result.error || "Something went wrong on our side. Try again in a moment.");
       return;
     }
     router.push("/welcome");
@@ -168,13 +182,36 @@ export default function SignupPage() {
                 I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and I’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
               </span>
             </label>
-            {error && <p className="text-sm text-ember-700">{error}</p>}
             {checkEmail && (
               <p className="rounded-2xl bg-cream-200 px-4 py-3 text-sm text-ink-700">
                 Almost in — we sent a confirmation link to {checkEmail}. Open it to finish setting up.
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Setting your place…" : "Create account"}</Button>
+            <Button
+              id="signup-submit"
+              type="submit"
+              className={cn("w-full", busy && "disabled:opacity-80")}
+              disabled={busy}
+              aria-busy={busy}
+            >
+              {busy ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <span
+                    aria-hidden
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100"
+                  />
+                  Settling you in…
+                </span>
+              ) : (
+                "Create account"
+              )}
+            </Button>
+            {error && (
+              <p role="alert" className="flex items-start gap-2 text-sm text-ink-700">
+                <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-ember-glow" />
+                <span>{error}</span>
+              </p>
+            )}
           </form>
           <p className="mt-4 text-center text-xs text-ink-500">
             Free · No spam · You can delete anytime
