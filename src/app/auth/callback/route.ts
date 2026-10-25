@@ -14,7 +14,13 @@ export async function GET(request: NextRequest) {
   const supabase = await getSupabaseServerClient();
   if (code && supabase) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, url.origin));
+    if (!error) {
+      const dest = new URL(next, url.origin);
+      // Invite links (0014) survive a device switch: only a well-formed code is passed along.
+      const invite = (url.searchParams.get("invite") || "").toLowerCase();
+      if (next === "/welcome" && /^[a-z2-7]{16}$/.test(invite)) dest.searchParams.set("invite", invite);
+      return NextResponse.redirect(dest);
+    }
   }
   return NextResponse.redirect(new URL("/login?error=link", url.origin));
 }

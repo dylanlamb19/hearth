@@ -89,9 +89,9 @@ export type ResolvedInvite =
   | { status: "ok"; displayName: string; inviterId: string | null }
   | { status: "expired" };
 
-/** Only the shape of a real code is accepted before hitting the database. */
+/** Only the shape of a real code (16-char base32, see 0014) is accepted before hitting the database. */
 export function isServerCode(code: string): boolean {
-  return /^[a-z0-9]{12}$/.test(code.toLowerCase());
+  return /^[a-z2-7]{16}$/.test(code.toLowerCase());
 }
 
 type Row = { code: string; expires_at: string };

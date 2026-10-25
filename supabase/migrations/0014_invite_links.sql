@@ -7,7 +7,7 @@
 --   * Deleting an account cascades away its links.
 
 create table if not exists public.invite_links (
-  code text primary key check (code ~ '^[a-z0-9]{12}$'),
+  code text primary key check (code ~ '^[a-z2-7]{16}$'),
   inviter_id uuid not null references public.profiles (id) on delete cascade,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default now() + interval '14 days',
@@ -24,10 +24,26 @@ drop policy if exists invite_links_select_own on public.invite_links;
 create policy invite_links_select_own on public.invite_links
   for select to authenticated using (inviter_id = auth.uid());
 
+-- 16 chars of RFC 4648 base32 (lowercase) from 10 random bytes = 80 bits.
+create extension if not exists pgcrypto with schema extensions;
 create or replace function public.new_invite_code()
-returns text language sql volatile set search_path = public, pg_temp as $$
-  select substr(md5(gen_random_uuid()::text || clock_timestamp()::text), 1, 12);
-$$;
+returns text language plpgsql volatile set search_path = public, extensions, pg_temp as $$
+declare
+  alphabet constant text := 'abcdefghijklmnopqrstuvwxyz234567';
+  b bytea := extensions.gen_random_bytes(10);
+  bits int := 0; acc int := 0; out text := ''; i int;
+begin
+  for i in 0..9 loop
+    acc := (acc << 8) | get_byte(b, i);
+    bits := bits + 8;
+    while bits >= 5 loop
+      out := out || substr(alphabet, ((acc >> (bits - 5)) & 31) + 1, 1);
+      bits := bits - 5;
+    end loop;
+    acc := acc & ((1 << bits) - 1);
+  end loop;
+  return out;
+end $$;
 revoke all on function public.new_invite_code() from public, anon, authenticated;
 
 -- The caller's active link, minting one if none is live.
@@ -50,7 +66,8 @@ end $$;
 revoke all on function public.my_invite_link() from public, anon;
 grant execute on function public.my_invite_link() to authenticated;
 
--- "Reset link": revoke every live link and mint a new one. At most 5 resets per 24 hours.
+-- "Reset link": revoke every live link and mint a new one. The check counts links *created* in
+-- the last 24 hours: >= 6 means the first link + 5 resets, so the 6th reset in a day is refused.
 create or replace function public.reset_invite_link()
 returns table (code text, expires_at timestamptz)
 language plpgsql volatile security definer set search_path = public, pg_temp as $$
