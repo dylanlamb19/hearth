@@ -14,6 +14,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { posts } from "@/data/seed";
 import { useEffect, useState } from "react";
 import { followCounts, type FollowCounts } from "@/lib/follows";
+import { SupporterDot, SupporterFrameWrap, tintColor, usePublicPerks } from "@/components/SupporterPerks";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -21,6 +22,8 @@ export default function ProfilePage() {
   const mine = posts.filter((p) => p.authorId === user?.id);
   // This route is the signed-in user's own profile.
   const isOwnProfile = Boolean(user);
+  // Supporter cosmetics (null when the flag is off or you are not a Supporter).
+  const perks = usePublicPerks(user?.id);
   const [counts, setCounts] = useState<FollowCounts | null>(null);
 
   useEffect(() => {
@@ -33,15 +36,19 @@ export default function ProfilePage() {
   return (
     <AppShell>
       <section className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card">
-        <ProfileCover uid={user?.id} name={user?.name || "You"} isOwner={isOwnProfile} />
+        <ProfileCover uid={user?.id} name={user?.name || "You"} isOwner={isOwnProfile} tint={tintColor(perks)} />
         <div className="relative px-5 pb-5">
           <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
-              <div className="rounded-full bg-cream-50 shadow-soft ring-4 ring-cream-50">
-                <Avatar name={user?.name || "You"} size="2xl" src={avatarSrc} />
-              </div>
+              <SupporterFrameWrap perks={perks}>
+                <div className="rounded-full bg-cream-50 shadow-soft ring-4 ring-cream-50">
+                  <Avatar name={user?.name || "You"} size="2xl" src={avatarSrc} />
+                </div>
+              </SupporterFrameWrap>
               <div className="pb-1">
-                <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>
+                <h1 className="font-display text-3xl text-ink-900">{user?.name}
+                  <SupporterDot perks={perks} />
+                </h1>
                 {user?.handle && <p className="text-sm text-ink-500">@{user.handle}</p>}
                 {counts && (
                   <p className="mt-1 text-xs text-ink-500">
