@@ -32,6 +32,14 @@ export async function uploadAvatar(uid: string, file: File): Promise<string> {
   return json.url || dataUrl;
 }
 
+/** True if the profile has a photo in Storage (profiles.avatar_path set). Demo mode: false. */
+export async function hasSavedAvatar(uid: string): Promise<boolean> {
+  const sb = getSupabaseBrowserClient();
+  if (!sb) return false;
+  const { data, error } = await sb.from("profiles").select("avatar_path").eq("id", uid).maybeSingle();
+  return !error && !!(data as { avatar_path?: string | null } | null)?.avatar_path;
+}
+
 async function signedAvatarUrl(uid: string): Promise<string | null> {
   const sb = getSupabaseBrowserClient();
   if (!sb) return getLocalAvatar(uid);

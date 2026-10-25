@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Image as ImageIcon, Video, Smile, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
-import { useAvatarSrc } from "@/lib/avatar";
+import { hasSavedAvatar, useAvatarSrc } from "@/lib/avatar";
 import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/Button";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -352,6 +352,10 @@ export default function HomePage() {
     void hasPostedMoment(uid).then((yes) => {
       const p = getProgress(uid);
       if (yes && !p.done) updateProgress(uid, { moment: true, done: true });
+    });
+    // A photo saved to Storage (from any device) counts as the photo step: no photo card.
+    void hasSavedAvatar(uid).then((yes) => {
+      if (yes && !getProgress(uid).photo) updateProgress(uid, { photo: true });
     });
     window.addEventListener("hearth:settle-in", read);
     return () => window.removeEventListener("hearth:settle-in", read);
