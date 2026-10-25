@@ -13,8 +13,11 @@ export function Avatar({
   size = "md",
   online,
   className,
+  src,
 }: {
   name: string;
+  /** Optional photo (e.g. the device-local Settle-in avatar). Falls back to initials. */
+  src?: string | null;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   online?: boolean;
   className?: string;
@@ -23,9 +26,14 @@ export function Avatar({
   const color = palette[name.length % palette.length];
   return (
     <div className={cn("relative inline-flex shrink-0", className)}>
-      <div className={cn("flex items-center justify-center rounded-full font-medium", sizes[size], color)}>
-        {initials(name)}
-      </div>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className={cn("rounded-full object-cover", sizes[size])} />
+      ) : (
+        <div className={cn("flex items-center justify-center rounded-full font-medium", sizes[size], color)}>
+          {initials(name)}
+        </div>
+      )}
       {online && (
         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-cream-100 bg-emerald-500" />
       )}

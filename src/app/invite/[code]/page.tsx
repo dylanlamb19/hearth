@@ -6,12 +6,18 @@ import { PublicFooter } from "@/components/PublicFooter";
 import { PublicHeader } from "@/components/PublicHeader";
 import { Button } from "@/components/Button";
 import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
+import { useEffect } from "react";
+import { rememberInvite } from "@/lib/settleIn";
 
-/** Minimal invite landing — warm welcome + signup/login CTA. No referral tracking. */
+/**
+ * Minimal invite landing — warm welcome + signup/login CTA. No referral tracking: the code is
+ * only remembered on this device so /welcome can suggest the person who invited you.
+ */
 export default function InviteLandingPage() {
   const params = useParams<{ code: string }>();
   const code = (params?.code || "").trim();
   const [blocked] = useAgeBlocked();
+  useEffect(() => rememberInvite(code), [code]);
 
   if (blocked) return <AgeBlockedScreen />;
 
