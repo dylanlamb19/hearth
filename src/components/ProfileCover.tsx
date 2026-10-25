@@ -9,7 +9,7 @@ import { COVER_ALT_MAX } from "@/lib/coverLimits";
  * 3:1 cover above the avatar. Default is a warm cream (#FBF6EE) to ~18% amber gradient, never a grey box.
  * The owner gets a ghost "Add a cover" pill (v1: center crop only, no drag to reposition).
  */
-export function ProfileCover({ uid, name, isOwner }: { uid?: string; name: string; isOwner: boolean }) {
+export function ProfileCover({ uid, name, isOwner, tint }: { uid?: string; name: string; isOwner: boolean; /** Supporter header tint (replaces the amber stop). */ tint?: string }) {
   const { src, alt } = useCover(uid);
   const [altOpen, setAltOpen] = useState(false);
   const [altText, setAltText] = useState("");
@@ -64,7 +64,10 @@ export function ProfileCover({ uid, name, isOwner }: { uid?: string; name: strin
     "inline-flex items-center gap-1.5 rounded-full border border-cream-50/80 bg-cream-50/60 px-3 py-1.5 text-xs font-medium text-ink-800 backdrop-blur transition hover:bg-cream-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400 disabled:opacity-60";
 
   return (
-    <div className="relative aspect-[3/1] max-h-48 w-full overflow-hidden bg-gradient-to-br from-cream-cover to-ember-glow/[0.18]">
+    <div
+      className={`relative aspect-[3/1] max-h-48 w-full overflow-hidden ${tint ? "" : "bg-gradient-to-br from-cream-cover to-ember-glow/[0.18]"}`}
+      style={tint ? { backgroundImage: `linear-gradient(to bottom right, #FBF6EE, ${tint})` } : undefined}
+    >
       {src && (
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
         <img src={src} alt={alt?.trim() || `${name}’s cover photo`} className="h-full w-full object-cover object-center" />
