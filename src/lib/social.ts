@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { markSeen } from "@/lib/moments";
 
 /**
  * Reactions and comments. Supabase when configured and the Moment is stored (uuid);
@@ -89,6 +90,8 @@ export async function setReaction(momentId: string, userId: string, kind: Reacti
   if (!kind) return;
   const { error } = await sb.from("reactions").insert({ moment_id: momentId, kind });
   if (error && error.code !== "23505") throw new Error("Couldn’t save that. Try again?");
+  // Reacting counts as seeing it: it leaves "From your people" but stays in the feed.
+  void markSeen([momentId]);
 }
 
 // --- Comments ---------------------------------------------------------------
@@ -179,6 +182,8 @@ export async function addComment(
     throw new Error("Couldn’t post that comment. Try again?");
   }
   const row = data as { id: string; created_at: string };
+  // Commenting counts as seeing it, same as reacting.
+  void markSeen([momentId]);
   return { id: row.id, momentId, parentId, authorId: author.id, authorName: author.name, body: text, deleted: false, createdAt: row.created_at, loveCount: 0, lovedByMe: false };
 }
 
