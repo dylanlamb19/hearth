@@ -128,11 +128,14 @@ export default function WelcomePage() {
   const [inviter, setInviter] = useState<Person | null>(null);
   // Glow: a same-size cream placeholder row holds the inviter's slot while it resolves.
   const [inviterPending, setInviterPending] = useState(false);
+  // Glow: on an expired or blocked invite the placeholder fades out (~150ms) instead of vanishing.
+  const [inviterFading, setInviterFading] = useState(false);
   useEffect(() => {
     // Order: ?invite= (from the confirmation link), then signup metadata (read from the auth
     // server, so it survives a device switch), then the code saved on this device.
     const sb = getSupabaseBrowserClient();
     let live = true;
+    let fadeTimer: ReturnType<typeof setTimeout> | undefined;
     (async () => {
       const fromUrl = (new URLSearchParams(window.location.search).get("invite") || "").toLowerCase();
       let code: string | null = isServerCode(fromUrl) ? fromUrl : null;
@@ -149,13 +152,18 @@ export default function WelcomePage() {
       if (live) setInviterPending(true);
       return resolveInvite(sb, code);
     })().then((inv) => {
-      if (live) setInviterPending(false);
-      if (!inv) return;
-      if (!live || inv.status !== "ok" || !inv.inviterId) return;
+      if (!live || !inv) return;
+      if (inv.status !== "ok" || !inv.inviterId) {
+        setInviterFading(true);
+        fadeTimer = setTimeout(() => live && setInviterPending(false), 150);
+        return;
+      }
+      setInviterPending(false);
       setInviter({ id: inv.inviterId, name: inv.displayName, handle: "", bio: "", mutuals: 0 });
     });
     return () => {
       live = false;
+      if (fadeTimer) clearTimeout(fadeTimer);
     };
   }, []);
   const suggestions = useMemo(() => {
@@ -435,7 +443,9 @@ export default function WelcomePage() {
                   {inviterPending && !inviter && (
                     <li
                       aria-hidden
-                      className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-cream-100 px-3 py-2.5"
+                      className={`flex items-center gap-3 rounded-2xl border border-ink-100 bg-cream-100 px-3 py-2.5 transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+                        inviterFading ? "opacity-0" : "opacity-100"
+                      }`}
                     >
                       <span className="h-8 w-8 shrink-0 rounded-full bg-cream-200" />
                       <div className="flex h-9 min-w-0 flex-1 flex-col justify-center gap-1.5">
