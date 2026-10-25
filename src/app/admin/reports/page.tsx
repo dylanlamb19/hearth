@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/adminGate";
 import { ConfirmSubmit } from "./ConfirmSubmit";
-import { removeComment, removeMoment, resolveFlaggedAccount, resolveUserReports, restoreComment, restoreMoment } from "./actions";
+import { removeComment, removeMoment, resolveFlaggedAccount, resolveUserReports, takeDownProfileContent, restoreComment, restoreMoment } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Open reports", robots: { index: false } };
@@ -182,7 +182,16 @@ export default async function AdminReportsPage() {
                         See account flag
                       </a>
                     )}
-                    <form action={resolveUserReports} className="ml-auto">
+                    <form action={takeDownProfileContent} className="ml-auto">
+                      <input type="hidden" name="userId" value={r.reported_user_id} />
+                      <ConfirmSubmit
+                        message="Remove this person’s cover photo, bio and city? Their account stays."
+                        className={`${pill} bg-ember-100 text-ember-800 hover:bg-ember-200`}
+                      >
+                        Take down cover &amp; About
+                      </ConfirmSubmit>
+                    </form>
+                    <form action={resolveUserReports}>
                       <input type="hidden" name="userId" value={r.reported_user_id} />
                       <button type="submit" className={`${pill} bg-cream-100 text-ink-700 hover:bg-cream-200`}>
                         Resolve

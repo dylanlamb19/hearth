@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { MEDIA_BUCKET } from "@/lib/mediaLimits";
+import { COVER_BUCKET } from "@/lib/coverLimits";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./config";
 
 const PAGE = 100;
@@ -19,16 +20,16 @@ export async function verifyPassword(userId: string, email: string, password: st
   return !error && data.user?.id === userId;
 }
 
-/** Removes every file under `<userId>/` in the media bucket. Returns how many were removed. */
-export async function removeUserMedia(admin: SupabaseClient, userId: string): Promise<number> {
+/** Removes every file under `<userId>/` in a bucket (media by default). Returns how many were removed. */
+export async function removeUserMedia(admin: SupabaseClient, userId: string, bucket: string = MEDIA_BUCKET): Promise<number> {
   let removed = 0;
   // Always list from the start: removed files drop out of the listing.
   for (let round = 0; round < 1000; round++) {
-    const { data, error } = await admin.storage.from(MEDIA_BUCKET).list(userId, { limit: PAGE });
+    const { data, error } = await admin.storage.from(bucket).list(userId, { limit: PAGE });
     if (error) throw new Error(`list failed: ${error.message}`);
     const paths = (data ?? []).filter((f) => f.name).map((f) => `${userId}/${f.name}`);
     if (paths.length === 0) return removed;
-    const { error: removeError } = await admin.storage.from(MEDIA_BUCKET).remove(paths);
+    const { error: removeError } = await admin.storage.from(bucket).remove(paths);
     if (removeError) throw new Error(`remove failed: ${removeError.message}`);
     removed += paths.length;
   }
@@ -37,15 +38,17 @@ export async function removeUserMedia(admin: SupabaseClient, userId: string): Pr
 
 /**
  * Deletes an account. The auth user goes FIRST (cascading to profiles, Moments, uploads and
- * the rest), so the account is gone even if file removal then fails. Leftover files are
+ * the rest), then their Moment files and cover photos are removed, so the account is gone even if file removal then fails. Leftover files are
  * untracked and unattached, so the daily cleanup sweep removes them.
  */
 export async function deleteAccount(admin: SupabaseClient, userId: string): Promise<void> {
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) throw new Error(`delete user failed: ${error.message}`);
-  try {
-    await removeUserMedia(admin, userId);
-  } catch (e) {
-    console.error("[hearth] account files left for the cleanup sweep", { userId, error: (e as Error).message });
+  for (const bucket of [MEDIA_BUCKET, COVER_BUCKET]) {
+    try {
+      await removeUserMedia(admin, userId, bucket);
+    } catch (e) {
+      console.error("[hearth] account files left for the cleanup sweep", { userId, bucket, error: (e as Error).message });
+    }
   }
 }
