@@ -19,6 +19,7 @@ import {
   deleteMoment,
   demoSeenIds,
   getFeed,
+  hasPostedMoment,
   updateMoment,
   type FeedCursor,
   type FeedTab,
@@ -327,17 +328,33 @@ export default function HomePage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("first") !== "1") return;
     showToast("Your first Moment is by the fire.", 4000);
-    params.delete("first");
-    const qs = params.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    // Keep ?first=1 in the URL while the toast is up, then drop it so a reload doesn't repeat it.
+    setTimeout(() => {
+      const now = new URLSearchParams(window.location.search);
+      if (now.get("first") !== "1") return;
+      now.delete("first");
+      const rest = now.toString();
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}${rest ? `?${rest}` : ""}`);
+    }, 4000);
   }, []);
 
   // A skipped photo step comes back once as a soft card after Settle in is finished.
   const [photoCard, setPhotoCard] = useState(false);
   useEffect(() => {
     if (!user) return;
-    const p = getProgress(user.id);
-    setPhotoCard(p.done && !p.photo && !photoCardDismissed(user.id));
+    const uid = user.id;
+    const read = () => {
+      const p = getProgress(uid);
+      setPhotoCard(p.done && !p.photo && !photoCardDismissed(uid));
+    };
+    read();
+    // Accounts that posted before Settle in shipped: one Moment means they're settled.
+    void hasPostedMoment(uid).then((yes) => {
+      const p = getProgress(uid);
+      if (yes && !p.done) updateProgress(uid, { moment: true, done: true });
+    });
+    window.addEventListener("hearth:settle-in", read);
+    return () => window.removeEventListener("hearth:settle-in", read);
   }, [user]);
 
   function handleMediaPick(
