@@ -13,6 +13,32 @@ function joinedLabel(iso: string | null): string | null {
   return `Joined ${d.toLocaleDateString(undefined, { month: "long", year: "numeric" })}`;
 }
 
+function VisibilityPicker({
+  legend,
+  name,
+  value,
+  onChange,
+}: {
+  legend: string;
+  name: string;
+  value: AboutVisibility;
+  onChange: (v: AboutVisibility) => void;
+}) {
+  return (
+    <fieldset className="text-xs text-ink-700">
+      <legend className="font-medium">{legend}</legend>
+      <div className="mt-1 flex gap-4">
+        {(["friends", "everyone"] as const).map((v) => (
+          <label key={v} className="inline-flex items-center gap-1.5">
+            <input type="radio" name={name} checked={value === v} onChange={() => onChange(v)} className="accent-ember-600" />
+            {v === "friends" ? "Friends" : "Everyone"}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 /**
  * Short About card under the name. All fields optional (no phone, address or birthday).
  * Owner with nothing filled in sees "Tell people a little about you."; visitors see nothing.
@@ -23,6 +49,7 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
   const [vis, setVis] = useState<AboutVisibility>("friends");
+  const [bioVis, setBioVis] = useState<AboutVisibility>("everyone");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fallbackKey = JSON.stringify(fallback ?? {});
@@ -45,6 +72,7 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
     setBio(about?.bio ?? "");
     setCity(about?.city ?? "");
     setVis(about?.cityVisibility ?? "friends");
+    setBioVis(about?.bioVisibility ?? "everyone");
     setError(null);
     setEditing(true);
   }
@@ -55,7 +83,7 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
     setSaving(true);
     setError(null);
     try {
-      await saveAbout(uid, { bio, city, cityVisibility: vis });
+      await saveAbout(uid, { bio, bioVisibility: bioVis, city, cityVisibility: vis });
       setEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t save that. Try again?");
@@ -68,7 +96,7 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
     return (
       <form onSubmit={onSave} className="mt-4 max-w-xl space-y-3 rounded-2xl border border-ink-100 bg-cream-50 p-4">
         <label className="block text-xs font-medium text-ink-700">
-          Bio <span className="font-normal text-ink-400">(optional · everyone can see it)</span>
+          Bio <span className="font-normal text-ink-400">(optional)</span>
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
@@ -78,6 +106,7 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
           />
           <span className="block text-right text-[11px] text-ink-400">{bio.length}/{BIO_MAX}</span>
         </label>
+        <VisibilityPicker legend="Who sees your bio" name="bio-vis" value={bioVis} onChange={setBioVis} />
         <label className="block text-xs font-medium text-ink-700">
           City <span className="font-normal text-ink-400">(optional · just the city, never your address)</span>
           <input
@@ -87,17 +116,7 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
             placeholder="e.g. Austin"
           />
         </label>
-        <fieldset className="text-xs text-ink-700">
-          <legend className="font-medium">Who sees your city</legend>
-          <div className="mt-1 flex gap-4">
-            {(["friends", "everyone"] as const).map((v) => (
-              <label key={v} className="inline-flex items-center gap-1.5">
-                <input type="radio" name="city-vis" checked={vis === v} onChange={() => setVis(v)} className="accent-ember-600" />
-                {v === "friends" ? "Friends" : "Everyone"}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <VisibilityPicker legend="Who sees your city" name="city-vis" value={vis} onChange={setVis} />
         {error && <p role="status" className="text-xs text-ink-700">{error}</p>}
         <div className="flex gap-2">
           <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
@@ -118,32 +137,38 @@ export function AboutCard({ uid, isOwner, fallback }: { uid?: string; isOwner: b
         onClick={startEdit}
         className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-dashed border-ember-200 bg-cream-50 px-4 py-3 text-sm text-ink-600 transition hover:bg-cream-100"
       >
-        <Pencil className="h-4 w-4 text-ember-500" aria-hidden />
+        <Pencil strokeWidth={1.75} className="h-4 w-4 text-ember-500" aria-hidden />
         Tell people a little about you.
+        <span className="rounded-full bg-ember-100 px-2.5 py-0.5 text-xs font-medium text-ember-800">Add details</span>
       </button>
     );
   }
 
   return (
     <div className="mt-4 max-w-xl space-y-2">
-      {about.bio && <p className="text-sm leading-relaxed text-ink-600">{about.bio}</p>}
+      {about.bio && (
+        <p className="text-sm leading-relaxed text-ink-600">
+          {about.bio}
+          {isOwner && <span className="ml-1 text-xs text-ink-400">· {about.bioVisibility === "friends" ? "Friends" : "Everyone"}</span>}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-500">
         {about.city && (
           <span className="inline-flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" aria-hidden />
+            <MapPin strokeWidth={1.75} className="h-3.5 w-3.5" aria-hidden />
             {about.city}
             {isOwner && <span className="text-ink-400">· {about.cityVisibility === "everyone" ? "Everyone" : "Friends"}</span>}
           </span>
         )}
         {joined && (
           <span className="inline-flex items-center gap-1">
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+            <CalendarDays strokeWidth={1.75} className="h-3.5 w-3.5" aria-hidden />
             {joined}
           </span>
         )}
         {isOwner && (
           <button type="button" onClick={startEdit} className="inline-flex items-center gap-1 text-ink-400 hover:text-ink-700">
-            <Pencil className="h-3 w-3" aria-hidden /> Edit About
+            <Pencil strokeWidth={1.75} className="h-3 w-3" aria-hidden /> Edit About
           </button>
         )}
       </div>
