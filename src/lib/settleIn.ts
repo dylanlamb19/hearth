@@ -124,6 +124,16 @@ export function rememberInvite(code: string) {
   if (code) write(INVITE_KEY, code);
 }
 
+/** The raw remembered code (server codes are resolved to an inviter in Settle in step 2). */
+export function pendingInviteCode(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(INVITE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function pendingInviteBase(): string | null {
   if (typeof window === "undefined") return null;
   try {

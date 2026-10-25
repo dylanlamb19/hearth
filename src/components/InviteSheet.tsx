@@ -1,28 +1,51 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link2, X } from "lucide-react";
+import { Link2, Share, X } from "lucide-react";
 import { useAuth } from "./AuthProvider";
-import { buildInviteUrl, getOrCreateInviteCode } from "@/lib/invite";
+import { buildInviteUrl, fetchMyInvite, getOrCreateInviteCode, resetMyInvite } from "@/lib/invite";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type InviteSheetProps = {
   open: boolean;
   onClose: () => void;
 };
 
-/** Quiet cream invite sheet — copy-link only, no bulk sends, no guilt on dismiss. */
+/**
+ * Glow invite-share-card v2: copy link, native share, quiet "Reset link". Real accounts get a
+ * server code (0014) that lasts 14 days; demo mode keeps the device-local code.
+ */
 export function InviteSheet({ open, onClose }: InviteSheetProps) {
   const { user } = useAuth();
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const code = useMemo(() => {
-    if (!open) return "";
+  const [serverCode, setServerCode] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const sb = useMemo(() => getSupabaseBrowserClient(), []);
+
+  const localCode = useMemo(() => {
+    if (!open || sb) return "";
     const seed = user?.handle || user?.id || "friend";
     const userId = user?.id || user?.handle || null;
     return getOrCreateInviteCode(seed, userId);
-  }, [open, user?.handle, user?.id]);
+  }, [open, sb, user?.handle, user?.id]);
+
+  useEffect(() => {
+    if (!open || !sb || !user) return;
+    let live = true;
+    fetchMyInvite(sb)
+      .then((inv) => live && setServerCode(inv.code))
+      .catch((e: Error) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
+  }, [open, sb, user]);
+
+  const code = sb ? serverCode || "" : localCode;
 
   const inviteLink = useMemo(() => (code ? buildInviteUrl(code) : ""), [code]);
 
@@ -45,6 +68,8 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
     if (!open) {
       setCopied(false);
       setToast(null);
+      setConfirmReset(false);
+      setError("");
     }
   }, [open]);
 
@@ -68,10 +93,42 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
       }
     }
     setCopied(true);
-    setToast("Link copied");
+    flash("Link copied");
+  }
+
+  function flash(msg: string) {
+    setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
   }
+
+  async function handleShare() {
+    if (!inviteLink) return;
+    try {
+      await navigator.share({ title: "Come sit with me on Hearth", url: inviteLink });
+    } catch {
+      /* dismissed */
+    }
+  }
+
+  async function handleReset() {
+    if (!sb) return;
+    setBusy(true);
+    setError("");
+    try {
+      const inv = await resetMyInvite(sb);
+      setServerCode(inv.code);
+      setCopied(false);
+      flash("New link ready");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      setConfirmReset(false);
+    }
+  }
+
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   if (!open) return null;
 
@@ -92,7 +149,7 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
         >
           <div className="flex items-center justify-between border-b border-ink-100/80 px-5 py-4">
             <h2 id="invite-sheet-title" className="font-display text-xl text-ink-900">
-              Invite someone in
+              Your invite link
             </h2>
             <button
               type="button"
@@ -106,11 +163,10 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
 
           <div className="px-5 py-5 sm:px-6">
             <p id="invite-sheet-body" className="text-sm leading-relaxed text-ink-600">
-              Share with someone you’d invite into the room — no bulk sends.
+              Anyone with this link can join Hearth. Links last 14 days.
             </p>
 
             <div className="mt-4 rounded-2xl bg-cream-100 px-3.5 py-3 ring-1 ring-ink-100/80">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">Your invite link</p>
               <p className="mt-1 break-all font-mono text-xs leading-relaxed text-ink-800 sm:text-sm">
                 {inviteLink || "..."}
               </p>
@@ -124,6 +180,54 @@ export function InviteSheet({ open, onClose }: InviteSheetProps) {
               <Link2 className="h-4 w-4 text-ember-500" aria-hidden />
               {copied ? "Copied" : "Copy link"}
             </button>
+
+            {canShare && (
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-ink-700 ring-1 ring-ink-100 transition hover:bg-cream-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400"
+              >
+                <Share className="h-4 w-4 text-ember-500" aria-hidden />
+                Share…
+              </button>
+            )}
+
+            {error && <p className="mt-3 text-center text-xs text-ink-600">{error}</p>}
+
+            {sb && serverCode && (
+              <div className="mt-4 text-center">
+                {confirmReset ? (
+                  <div className="rounded-2xl bg-cream-100 px-3 py-3 text-sm text-ink-700">
+                    <p>Reset your link? The old one stops working.</p>
+                    <div className="mt-2 flex justify-center gap-3">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void handleReset()}
+                        className="rounded-full px-3 py-1 text-xs font-medium text-ember-700 ring-1 ring-ember-200 hover:bg-ember-50 disabled:opacity-60"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmReset(false)}
+                        className="rounded-full px-3 py-1 text-xs text-ink-500 hover:text-ink-700"
+                      >
+                        Keep it
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmReset(true)}
+                    className="text-xs text-ink-400 underline-offset-2 hover:text-ink-600 hover:underline"
+                  >
+                    Reset link
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
