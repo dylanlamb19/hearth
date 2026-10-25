@@ -28,6 +28,20 @@ import {
 } from "@/lib/settleIn";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";
 
+/** Inviter row: their real photo through the signed (block-aware) avatar URL, else an amber initial. */
+function InviterAvatar({ id, name }: { id: string; name: string }) {
+  const src = useAvatarSrc(id);
+  if (src) return <Avatar name={name} size="sm" src={src} />;
+  return (
+    <span
+      aria-hidden
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ember-500 text-sm font-medium text-cream-50"
+    >
+      {(name.trim()[0] || "H").toUpperCase()}
+    </span>
+  );
+}
+
 function isHandleTaken(handle: string, selfId?: string) {
   const h = handle.toLowerCase();
   if (!h) return false;
@@ -113,10 +127,26 @@ export default function WelcomePage() {
   // only the new person's tap sends the knock. Blocked or expired invites resolve to nothing.
   const [inviter, setInviter] = useState<Person | null>(null);
   useEffect(() => {
-    const code = pendingInviteCode();
-    if (!code || !isServerCode(code)) return;
+    // Order: ?invite= (from the confirmation link), then signup metadata (read from the auth
+    // server, so it survives a device switch), then the code saved on this device.
+    const sb = getSupabaseBrowserClient();
     let live = true;
-    resolveInvite(getSupabaseBrowserClient(), code).then((inv) => {
+    (async () => {
+      const fromUrl = (new URLSearchParams(window.location.search).get("invite") || "").toLowerCase();
+      let code: string | null = isServerCode(fromUrl) ? fromUrl : null;
+      if (!code && sb) {
+        const { data } = await sb.auth.getUser();
+        const meta = data.user?.user_metadata?.invite_code;
+        if (typeof meta === "string" && isServerCode(meta)) code = meta.toLowerCase();
+      }
+      if (!code) {
+        const saved = pendingInviteCode();
+        if (saved && isServerCode(saved)) code = saved.toLowerCase();
+      }
+      if (!code) return null;
+      return resolveInvite(sb, code);
+    })().then((inv) => {
+      if (!inv) return;
       if (!live || inv.status !== "ok" || !inv.inviterId) return;
       setInviter({ id: inv.inviterId, name: inv.displayName, handle: "", bio: "", mutuals: 0 });
     });
@@ -403,11 +433,11 @@ export default function WelcomePage() {
                     const isInviter = inviter?.id === p.id;
                     return (
                       <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white px-3 py-2.5">
-                        <Avatar name={p.name} size="sm" />
+                        {isInviter ? <InviterAvatar id={p.id} name={p.name} /> : <Avatar name={p.name} size="sm" />}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
                           {isInviter ? (
-                            <p className="truncate text-xs text-ink-400">Invited you</p>
+                            <p className="truncate text-xs text-ink-500">Invited you</p>
                           ) : (
                             p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>
                           )}

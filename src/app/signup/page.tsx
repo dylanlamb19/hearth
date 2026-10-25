@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { pendingInviteCode, rememberInvite } from "@/lib/settleIn";
+import { isServerCode } from "@/lib/invite";
 import { AuthBusyLabel, AuthError, ResendLink } from "@/components/AuthStates";
 import type { AuthErrorKind } from "@/lib/authErrors";
 import { birthYearOptions, isUnderMinAge, setAgeBlocked } from "@/lib/age";
@@ -14,6 +16,18 @@ import { cn } from "@/lib/utils";
 
 export default function SignupPage() {
   const { signup } = useAuth();
+  // ?invite= from /invite/{code}, else a code saved on this device. Never makes anyone friends.
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  useEffect(() => {
+    const fromUrl = (new URLSearchParams(window.location.search).get("invite") || "").toLowerCase();
+    if (isServerCode(fromUrl)) {
+      rememberInvite(fromUrl);
+      setInviteCode(fromUrl);
+      return;
+    }
+    const saved = pendingInviteCode();
+    if (saved && isServerCode(saved)) setInviteCode(saved.toLowerCase());
+  }, []);
   const router = useRouter();
   const [blocked, setBlocked] = useAgeBlocked();
   const [error, setError] = useState<{ kind?: AuthErrorKind; text?: string } | null>(null);
@@ -57,7 +71,7 @@ export default function SignupPage() {
     setBusy(true);
     let result: Awaited<ReturnType<typeof signup>>;
     try {
-      result = await signup(email, password, name, birthYear);
+      result = await signup(email, password, name, birthYear, inviteCode);
     } catch {
       result = { user: null, errorKind: "unknown" };
     }
