@@ -82,15 +82,24 @@ export async function listMoments(): Promise<MomentList> {
 export async function createMoment(input: NewMoment): Promise<Post> {
   const sb = getSupabaseBrowserClient();
   if (sb) {
-    const { data, error } = await sb
+    // No RETURNING: the select policy (0010) calls can_see_moment(id), a security-definer
+    // function whose snapshot can't see the row being inserted, so INSERT ... RETURNING
+    // failed RLS for every audience. Read the new row back in a second statement instead.
+    const { error: insErr } = await sb
       .from("moments")
       .insert({
         author_id: input.authorId,
         body: input.body,
         visibility: input.visibility,
         media_path: input.media?.path ?? null,
-      })
+      });
+    if (insErr) throw new Error(insErr.message || "Could not share that Moment.");
+    const { data, error } = await sb
+      .from("moments")
       .select(SELECT)
+      .eq("author_id", input.authorId)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single();
     if (error || !data) throw new Error(error?.message || "Could not share that Moment.");
     return (await withUrls([data as unknown as MomentRow]))[0];
