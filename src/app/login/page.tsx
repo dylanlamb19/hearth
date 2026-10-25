@@ -6,31 +6,49 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
+import { AuthBusyLabel, AuthError } from "@/components/AuthStates";
+import { AUTH_COPY, type AuthErrorKind } from "@/lib/authErrors";
+import { cn } from "@/lib/utils";
 import { needsOnboarding } from "@/lib/auth";
 import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 
 export default function LoginPage() {
   const { login, mode } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ kind?: AuthErrorKind; text?: string } | null>(null);
+  const [email, setEmail] = useState("");
   const [blocked] = useAgeBlocked();
   const [busy, setBusy] = useState(false);
 
+  /** Inline error under the button; form values stay put and focus returns to the button. */
+  function showError(next: { kind?: AuthErrorKind; text?: string }) {
+    setError(next);
+    requestAnimationFrame(() => document.getElementById("login-submit")?.focus());
+  }
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy) return;
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") || "");
     const password = String(data.get("password") || "");
+    setEmail(email);
     if (!email || password.length < 8) {
-      setError("Use a valid email and a password with at least 8 characters.");
+      showError({ kind: "weak-password" });
       return;
     }
-    setError("");
+    setError(null);
     setBusy(true);
-    const { user, error: authError } = await login(email, password);
+    let result: Awaited<ReturnType<typeof login>>;
+    try {
+      result = await login(email, password);
+    } catch {
+      result = { user: null, errorKind: "unknown" };
+    }
     setBusy(false);
+    const user = result.user;
     if (!user) {
-      setError(authError || "Could not sign in. Try again?");
+      showError(result.errorKind ? { kind: result.errorKind } : { text: result.error || AUTH_COPY.unknown });
       return;
     }
     if (needsOnboarding(user)) {
@@ -74,8 +92,16 @@ export default function LoginPage() {
             <div className="flex justify-end">
               <Link href="/forgot-password" className="text-sm text-ink-500 hover:text-ink-800">Forgot password?</Link>
             </div>
-            {error && <p className="text-sm text-ember-700">{error}</p>}
-            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Opening the door…" : "Sign in"}</Button>
+            <Button
+              id="login-submit"
+              type="submit"
+              className={cn("w-full", busy && "disabled:opacity-80")}
+              disabled={busy}
+              aria-busy={busy}
+            >
+              {busy ? <AuthBusyLabel label="Opening the door…" /> : "Sign in"}
+            </Button>
+            {error && <AuthError kind={error.kind} fallback={error.text} email={email} />}
           </form>
           <p className="mt-6 text-sm text-ink-500">
             New here? <Link href="/signup" className="font-medium text-ink-800 underline-offset-2 hover:underline">Create an account</Link>
