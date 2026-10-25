@@ -13,15 +13,13 @@ import { people, type Person } from "@/data/seed";
 import { listPeople } from "@/lib/follows";
 import { sendKnock } from "@/lib/knocks";
 import { createMoment } from "@/lib/moments";
+import { uploadAvatar, useAvatarSrc } from "@/lib/avatar";
 import {
   PEOPLE_GOAL,
-  avatarFromFile,
-  getLocalAvatar,
   getProgress,
   pendingInviteBase,
   pickPrompt,
   setFirstMoment,
-  setLocalAvatar,
   updateProgress,
 } from "@/lib/settleIn";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";
@@ -54,6 +52,10 @@ export default function WelcomePage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [avatar, setAvatar] = useState<string | null>(null);
+  const storedAvatar = useAvatarSrc(user?.id);
+  useEffect(() => {
+    if (storedAvatar) setAvatar(storedAvatar);
+  }, [storedAvatar]);
   const [photoError, setPhotoError] = useState("");
   const [handle, setHandle] = useState("");
   const [handleReady, setHandleReady] = useState(false);
@@ -71,7 +73,6 @@ export default function WelcomePage() {
 
   useEffect(() => {
     if (!user) return;
-    setAvatar(getLocalAvatar(user.id));
     setKnocked(getProgress(user.id).knocked);
   }, [user]);
 
@@ -166,8 +167,7 @@ export default function WelcomePage() {
       return;
     }
     try {
-      const url = await avatarFromFile(file);
-      setLocalAvatar(me.id, url);
+      const url = await uploadAvatar(me.id, file);
       setAvatar(url);
       setPhotoError("");
       updateProgress(me.id, { photo: true });

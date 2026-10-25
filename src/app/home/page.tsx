@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Image as ImageIcon, Video, Smile, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { useAvatarSrc } from "@/lib/avatar";
 import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/Button";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -35,7 +36,6 @@ import { getReportedIds } from "@/lib/reported";
 import { cn } from "@/lib/utils";
 import {
   dismissNudge,
-  getLocalAvatar,
   pickPrompt,
   shouldNudge,
   takeFirstMoment,
@@ -164,13 +164,12 @@ export default function HomePage() {
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   // Settle in: the Moment just shared on /welcome shows on top, once.
   const [firstMoment, setFirstMomentPost] = useState<Post | null>(null);
-  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const avatarSrc = useAvatarSrc(user?.id);
   const [nudge, setNudge] = useState(false);
   const [composePrompt] = useState(() => pickPrompt());
 
   useEffect(() => {
     if (!user) return;
-    setAvatarSrc(getLocalAvatar(user.id));
     setNudge(shouldNudge(user.id, user.onboardingCompletedAt));
     const m = takeFirstMoment();
     if (m && m.authorId === user.id) {

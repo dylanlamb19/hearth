@@ -65,10 +65,7 @@ export function pickPrompt(seed = Date.now()): string {
   return PROMPTS[Math.floor(seed / 1000) % PROMPTS.length];
 }
 
-/**
- * Profile photo, kept on this device only. Avatars aren't in Storage yet (the media bucket
- * only signs files attached to a Moment), so it isn't written to profiles.photo_url.
- */
+/** Demo-mode profile photo, kept on this device. Real accounts use src/lib/avatar.ts. */
 export function getLocalAvatar(uid: string | undefined): string | null {
   if (!uid || typeof window === "undefined") return null;
   try {
@@ -83,15 +80,15 @@ export function setLocalAvatar(uid: string, dataUrl: string) {
   window.dispatchEvent(new Event("hearth:settle-in"));
 }
 
-/** Square 256px JPEG data URL; re-encoding through a canvas drops EXIF (including location). */
-export async function avatarFromFile(file: File): Promise<string> {
+/** Square JPEG data URL; re-encoding through a canvas drops EXIF (including location). */
+export async function avatarFromFile(file: File, size = 256): Promise<string> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const side = Math.min(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 256;
+  canvas.width = canvas.height = size;
   canvas
     .getContext("2d")
-    ?.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 256, 256);
+    ?.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
   bitmap.close();
   return canvas.toDataURL("image/jpeg", 0.85);
 }
