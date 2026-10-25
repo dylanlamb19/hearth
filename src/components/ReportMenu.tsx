@@ -1,5 +1,6 @@
 "use client";
 
+import { announceBlocked } from "@/lib/blockedNow";
 import { useEffect, useState, type ReactNode } from "react";
 import { Flag, Ban, MoreHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "./Button";
@@ -106,6 +107,7 @@ export function ReportMenu({
     blockPerson(id, subject)
       .then(() => {
         onBlocked?.(id);
+        announceBlocked(id);
         setSheet({ kind: "block-done" });
       })
       .catch(() => setSheet(null));
@@ -237,7 +239,7 @@ export function ReportMenu({
       {sheet?.kind === "block-confirm" && (
         <CreamSheet
           title={`Block ${subject}?`}
-          description={`Block ${subject}? They won’t show up in your feed or search.`}
+          description={`Block ${subject}? They won’t show up in your feed or search, and you’ll no longer be friends.`}
           onClose={() => setSheet(null)}
         >
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
