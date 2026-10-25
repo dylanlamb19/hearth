@@ -126,6 +126,8 @@ export default function WelcomePage() {
   // Invite links (0014) never auto-friend: the inviter is offered first with "Let in" ready, and
   // only the new person's tap sends the knock. Blocked or expired invites resolve to nothing.
   const [inviter, setInviter] = useState<Person | null>(null);
+  // Glow: a same-size cream placeholder row holds the inviter's slot while it resolves.
+  const [inviterPending, setInviterPending] = useState(false);
   useEffect(() => {
     // Order: ?invite= (from the confirmation link), then signup metadata (read from the auth
     // server, so it survives a device switch), then the code saved on this device.
@@ -144,8 +146,10 @@ export default function WelcomePage() {
         if (saved && isServerCode(saved)) code = saved.toLowerCase();
       }
       if (!code) return null;
+      if (live) setInviterPending(true);
       return resolveInvite(sb, code);
     })().then((inv) => {
+      if (live) setInviterPending(false);
       if (!inv) return;
       if (!live || inv.status !== "ok" || !inv.inviterId) return;
       setInviter({ id: inv.inviterId, name: inv.displayName, handle: "", bio: "", mutuals: 0 });
@@ -427,7 +431,20 @@ export default function WelcomePage() {
                     {Math.min(knocked.length, target)} of {target}
                   </p>
                 )}
-                <ul className="max-h-72 space-y-2 overflow-y-auto text-left">
+                <ul className="max-h-72 space-y-2 overflow-y-auto text-left" aria-busy={inviterPending}>
+                  {inviterPending && !inviter && (
+                    <li
+                      aria-hidden
+                      className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-cream-100 px-3 py-2.5"
+                    >
+                      <span className="h-8 w-8 shrink-0 rounded-full bg-cream-200" />
+                      <div className="flex h-9 min-w-0 flex-1 flex-col justify-center gap-1.5">
+                        <span className="block h-3.5 w-28 rounded-full bg-cream-200" />
+                        <span className="block h-3 w-16 rounded-full bg-cream-200" />
+                      </div>
+                      <span className="h-7 w-14 rounded-full bg-cream-200" />
+                    </li>
+                  )}
                   {suggestions.map((p) => {
                     const done = knocked.includes(p.id);
                     const isInviter = inviter?.id === p.id;
