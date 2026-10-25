@@ -1,59 +1,33 @@
-"use client";
+import type { Metadata } from "next";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveInvite } from "@/lib/invite";
+import { InviteLanding } from "./InviteLanding";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { PublicFooter } from "@/components/PublicFooter";
-import { PublicHeader } from "@/components/PublicHeader";
-import { Button } from "@/components/Button";
-import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
-import { useEffect } from "react";
-import { rememberInvite } from "@/lib/settleIn";
+type Params = { params: Promise<{ code: string }> };
 
-/**
- * Minimal invite landing — warm welcome + signup/login CTA. No referral tracking: the code is
- * only remembered on this device so /welcome can suggest the person who invited you.
- */
-export default function InviteLandingPage() {
-  const params = useParams<{ code: string }>();
-  const code = (params?.code || "").trim();
-  const [blocked] = useAgeBlocked();
-  useEffect(() => rememberInvite(code), [code]);
+const DESCRIPTION = "A quieter place for the people you’d invite over.";
 
-  if (blocked) return <AgeBlockedScreen />;
+async function lookup(code: string) {
+  const sb = await getSupabaseServerClient();
+  return resolveInvite(sb, (code || "").trim());
+}
 
-  return (
-    <div className="min-h-screen bg-cream-100">
-      <PublicHeader />
-      <main className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center sm:py-24">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">You’re invited</p>
-        <h1 className="mt-3 font-display text-4xl text-ink-900 text-balance">Someone saved you a seat</h1>
-        <p className="mt-4 text-lg leading-relaxed text-ink-600 text-balance">
-          Hearth is a quieter place for people you already know. Come in when you’re ready — no rush.
-        </p>
-        {code ? (
-          <p className="mt-3 text-xs text-ink-400">
-            Invite code <span className="font-mono text-ink-500">{code}</span>
-          </p>
-        ) : null}
+/** Public link preview: display name only. Expired or unknown codes get a generic card. */
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { code } = await params;
+  const inv = await lookup(code);
+  const title = inv.status === "ok" ? `${inv.displayName} saved you a seat on Hearth` : "You’re invited to Hearth";
+  return {
+    title,
+    description: DESCRIPTION,
+    robots: { index: false, follow: false },
+    openGraph: { title, description: DESCRIPTION, type: "website" },
+    twitter: { card: "summary_large_image", title, description: DESCRIPTION },
+  };
+}
 
-        <div className="mt-8 flex w-full max-w-xs flex-col gap-2">
-          <Button href="/signup" variant="primary" className="w-full">
-            Create your account
-          </Button>
-          <Button href="/login" variant="secondary" className="w-full">
-            Sign in
-          </Button>
-        </div>
-
-        <p className="mt-8 text-sm text-ink-400">
-          Or{" "}
-          <Link href="/about" className="underline underline-offset-2 hover:text-ink-600">
-            learn what Hearth is
-          </Link>
-          .
-        </p>
-      </main>
-      <PublicFooter />
-    </div>
-  );
+export default async function InvitePage({ params }: Params) {
+  const { code } = await params;
+  const inv = await lookup(code);
+  return <InviteLanding code={code} displayName={inv.status === "ok" ? inv.displayName : null} />;
 }

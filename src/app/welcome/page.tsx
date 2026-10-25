@@ -12,6 +12,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { AudienceChip, type Audience } from "@/components/feed/AudienceChip";
 import { people, type Person } from "@/data/seed";
 import { listPeople } from "@/lib/follows";
+import { isServerCode, resolveInvite } from "@/lib/invite";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { sendKnock } from "@/lib/knocks";
 import { createMoment } from "@/lib/moments";
 import { uploadAvatar, useAvatarSrc } from "@/lib/avatar";
@@ -19,11 +21,26 @@ import {
   PEOPLE_GOAL,
   getProgress,
   pendingInviteBase,
+  pendingInviteCode,
   pickPrompt,
   setFirstMoment,
   updateProgress,
 } from "@/lib/settleIn";
 import { cn, handleFromName, normalizeHandle } from "@/lib/utils";
+
+/** Inviter row: their real photo through the signed (block-aware) avatar URL, else an amber initial. */
+function InviterAvatar({ id, name }: { id: string; name: string }) {
+  const src = useAvatarSrc(id);
+  if (src) return <Avatar name={name} size="sm" src={src} />;
+  return (
+    <span
+      aria-hidden
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ember-500 text-sm font-medium text-cream-50"
+    >
+      {(name.trim()[0] || "H").toUpperCase()}
+    </span>
+  );
+}
 
 function isHandleTaken(handle: string, selfId?: string) {
   const h = handle.toLowerCase();
@@ -106,18 +123,69 @@ export default function WelcomePage() {
       live = false;
     };
   }, []);
+  // Invite links (0014) never auto-friend: the inviter is offered first with "Let in" ready, and
+  // only the new person's tap sends the knock. Blocked or expired invites resolve to nothing.
+  const [inviter, setInviter] = useState<Person | null>(null);
+  // Glow: a same-size cream placeholder row holds the inviter's slot while it resolves.
+  const [inviterPending, setInviterPending] = useState(false);
+  // Glow: on an expired or blocked invite the placeholder fades out (~150ms) instead of vanishing.
+  const [inviterFading, setInviterFading] = useState(false);
+  useEffect(() => {
+    // Order: ?invite= (from the confirmation link), then signup metadata (read from the auth
+    // server, so it survives a device switch), then the code saved on this device.
+    const sb = getSupabaseBrowserClient();
+    let live = true;
+    let fadeTimer: ReturnType<typeof setTimeout> | undefined;
+    (async () => {
+      const fromUrl = (new URLSearchParams(window.location.search).get("invite") || "").toLowerCase();
+      let code: string | null = isServerCode(fromUrl) ? fromUrl : null;
+      if (!code && sb) {
+        const { data } = await sb.auth.getUser();
+        const meta = data.user?.user_metadata?.invite_code;
+        if (typeof meta === "string" && isServerCode(meta)) code = meta.toLowerCase();
+      }
+      if (!code) {
+        const saved = pendingInviteCode();
+        if (saved && isServerCode(saved)) code = saved.toLowerCase();
+      }
+      if (!code) return null;
+      if (live) setInviterPending(true);
+      return resolveInvite(sb, code);
+    })().then((inv) => {
+      if (!live || !inv) return;
+      if (inv.status !== "ok" || !inv.inviterId) {
+        setInviterFading(true);
+        fadeTimer = setTimeout(() => live && setInviterPending(false), 150);
+        return;
+      }
+      setInviterPending(false);
+      setInviter({ id: inv.inviterId, name: inv.displayName, handle: "", bio: "", mutuals: 0 });
+    });
+    return () => {
+      live = false;
+      if (fadeTimer) clearTimeout(fadeTimer);
+    };
+  }, []);
   const suggestions = useMemo(() => {
-    const inviter = pendingInviteBase();
     const others = roster.filter((p) => p.id !== user?.id && p.id !== "u-ember");
+    if (inviter && inviter.id !== user?.id) {
+      const fromRoster = others.find((p) => p.id === inviter.id);
+      const first = fromRoster ?? inviter;
+      return [first, ...others.filter((p) => p.id !== first.id)].slice(0, 6);
+    }
+    // Demo mode: local codes start with the inviter's handle.
+    const base = pendingInviteBase();
     const key = (p: Person) => (p.handle || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
-    const first = inviter ? others.filter((p) => key(p) === inviter) : [];
+    const first = base ? others.filter((p) => key(p) === base) : [];
     return [...first, ...others.filter((p) => !first.includes(p))].slice(0, 6);
-  }, [roster, user?.id]);
+  }, [roster, user?.id, inviter]);
   // Glow: the knock target is min(3, people here besides you), so a small room can still finish.
-  const available = useMemo(
-    () => roster.filter((p) => p.id !== user?.id && p.id !== "u-ember").length,
-    [roster, user?.id],
-  );
+  // The inviter always counts, even if they aren't in the first page of profiles.
+  const available = useMemo(() => {
+    const others = roster.filter((p) => p.id !== user?.id && p.id !== "u-ember");
+    const extra = inviter && inviter.id !== user?.id && !others.some((p) => p.id === inviter.id) ? 1 : 0;
+    return others.length + extra;
+  }, [roster, user?.id, inviter]);
   const target = Math.min(PEOPLE_GOAL, available);
   useEffect(() => {
     if (!user || !rosterLoaded) return;
@@ -371,15 +439,35 @@ export default function WelcomePage() {
                     {Math.min(knocked.length, target)} of {target}
                   </p>
                 )}
-                <ul className="max-h-72 space-y-2 overflow-y-auto text-left">
+                <ul className="max-h-72 space-y-2 overflow-y-auto text-left" aria-busy={inviterPending}>
+                  {inviterPending && !inviter && (
+                    <li
+                      aria-hidden
+                      className={`flex items-center gap-3 rounded-2xl border border-ink-100 bg-cream-100 px-3 py-2.5 transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+                        inviterFading ? "opacity-0" : "opacity-100"
+                      }`}
+                    >
+                      <span className="h-8 w-8 shrink-0 rounded-full bg-cream-200" />
+                      <div className="flex h-9 min-w-0 flex-1 flex-col justify-center gap-1.5">
+                        <span className="block h-3.5 w-28 rounded-full bg-cream-200" />
+                        <span className="block h-3 w-16 rounded-full bg-cream-200" />
+                      </div>
+                      <span className="h-7 w-14 rounded-full bg-cream-200" />
+                    </li>
+                  )}
                   {suggestions.map((p) => {
                     const done = knocked.includes(p.id);
+                    const isInviter = inviter?.id === p.id;
                     return (
                       <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white px-3 py-2.5">
-                        <Avatar name={p.name} size="sm" />
+                        {isInviter ? <InviterAvatar id={p.id} name={p.name} /> : <Avatar name={p.name} size="sm" />}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
-                          {p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>}
+                          {isInviter ? (
+                            <p className="truncate text-xs text-ink-500">Invited you</p>
+                          ) : (
+                            p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -392,7 +480,7 @@ export default function WelcomePage() {
                               : "text-ember-700 ring-1 ring-ember-glow hover:bg-ember-50",
                           )}
                         >
-                          {done ? "Knocked" : "Knock"}
+                          {done ? "Knocked" : isInviter ? "Let in" : "Knock"}
                         </button>
                       </li>
                     );

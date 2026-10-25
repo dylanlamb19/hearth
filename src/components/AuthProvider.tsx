@@ -42,7 +42,7 @@ type AuthContextValue = {
   isDemo: boolean;
   needsOnboarding: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
-  signup: (email: string, password: string, name: string, birthYear: number) => Promise<AuthResult>;
+  signup: (email: string, password: string, name: string, birthYear: number, inviteCode?: string | null) => Promise<AuthResult>;
   logout: () => void;
   updateUser: (patch: Partial<SessionUser>) => void;
   completeOnboarding: (patch?: Partial<SessionUser>) => void;
@@ -161,7 +161,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(
-    async (email: string, password: string, name: string, birthYear: number): Promise<AuthResult> => {
+    async (
+      email: string,
+      password: string,
+      name: string,
+      birthYear: number,
+      inviteCode?: string | null,
+    ): Promise<AuthResult> => {
+      const invite = inviteCode && /^[a-z2-7]{16}$/.test(inviteCode.toLowerCase()) ? inviteCode.toLowerCase() : null;
       const normalized = email.trim().toLowerCase();
       const sb = getSupabaseBrowserClient();
       if (!sb) return { user: null, error: DEMO_ONLY_MESSAGE };
@@ -171,9 +178,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           // birth_year is checked again by the signup trigger (0002_age_gate.sql);
           // terms_accepted sets profiles.terms_accepted_at.
-          data: { name: name.trim(), birth_year: birthYear, terms_accepted: true },
+          // invite_code lets /welcome find the inviter on another device (never auto-friends).
+          data: { name: name.trim(), birth_year: birthYear, terms_accepted: true, ...(invite ? { invite_code: invite } : {}) },
           emailRedirectTo:
-            typeof window !== "undefined" ? window.location.origin + "/auth/callback?next=/welcome" : undefined,
+            typeof window !== "undefined" ? window.location.origin + "/auth/callback?next=/welcome" + (invite ? `&invite=${invite}` : "")
+              : undefined,
         },
       });
       if (error) {

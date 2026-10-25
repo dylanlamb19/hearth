@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 const GLOBAL_STORAGE_KEY = "hearth_invite_code";
 
 function storageKeyForUser(userId: string): string {
@@ -75,4 +77,57 @@ export function getOrCreateInviteCode(seed: string, userId?: string | null): str
 export function buildInviteUrl(code: string): string {
   if (typeof window === "undefined") return `/invite/${code}`;
   return `${window.location.origin}/invite/${code}`;
+}
+
+// ---------------------------------------------------------------------------
+// Server-side links (migration 0014). Demo mode (no Supabase) keeps the local code above.
+// ---------------------------------------------------------------------------
+
+export const INVITE_DAYS = 14;
+export type MyInvite = { code: string; expiresAt: string | null };
+export type ResolvedInvite =
+  | { status: "ok"; displayName: string; inviterId: string | null }
+  | { status: "expired" };
+
+/** Only the shape of a real code (16-char base32, see 0014) is accepted before hitting the database. */
+export function isServerCode(code: string): boolean {
+  return /^[a-z2-7]{16}$/.test(code.toLowerCase());
+}
+
+type Row = { code: string; expires_at: string };
+
+export async function fetchMyInvite(sb: SupabaseClient): Promise<MyInvite> {
+  const { data, error } = await sb.rpc("my_invite_link");
+  if (error) throw new Error("Couldn’t load your link. Try again?");
+  const row = (data as Row[] | null)?.[0];
+  if (!row) throw new Error("Couldn’t load your link. Try again?");
+  return { code: row.code, expiresAt: row.expires_at };
+}
+
+export async function resetMyInvite(sb: SupabaseClient): Promise<MyInvite> {
+  const { data, error } = await sb.rpc("reset_invite_link");
+  if (error) {
+    throw new Error(
+      error.message.includes("invite_reset_rate_limited")
+        ? "That’s a few resets today. Try again tomorrow."
+        : "Couldn’t reset your link. Try again?",
+    );
+  }
+  const row = (data as Row[] | null)?.[0];
+  if (!row) throw new Error("Couldn’t reset your link. Try again?");
+  return { code: row.code, expiresAt: row.expires_at };
+}
+
+/** Display name only. Unknown, reset, expired, deleted or blocked all come back as "expired". */
+export async function resolveInvite(sb: SupabaseClient | null, code: string): Promise<ResolvedInvite> {
+  if (!sb || !isServerCode(code)) return { status: "expired" };
+  const { data, error } = await sb.rpc("resolve_invite", { invite_code: code.toLowerCase() });
+  const row = (data as { status: string; display_name: string | null; inviter_id: string | null }[] | null)?.[0];
+  if (error || !row || row.status !== "ok" || !row.display_name) return { status: "expired" };
+  return { status: "ok", displayName: row.display_name, inviterId: row.inviter_id };
+}
+
+/** Amber-initial letter for the preview card and invite page (never a photo). */
+export function initialOf(name: string): string {
+  return (name.trim()[0] || "H").toUpperCase();
 }
