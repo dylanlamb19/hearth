@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { Info } from "lucide-react";
+import { AuthBusyLabel, AuthError, ResendLink } from "@/components/AuthStates";
+import type { AuthErrorKind } from "@/lib/authErrors";
 import { birthYearOptions, isUnderMinAge, setAgeBlocked } from "@/lib/age";
 import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 import { useRouter } from "next/navigation";
@@ -15,14 +16,14 @@ export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
   const [blocked, setBlocked] = useAgeBlocked();
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ kind?: AuthErrorKind; text?: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState("");
 
   /** Inline error under the button; form values stay put and focus returns to the button. */
-  function showError(message: string) {
-    setError(message);
+  function showError(next: { kind?: AuthErrorKind; text?: string }) {
+    setError(next);
     requestAnimationFrame(() => document.getElementById("signup-submit")?.focus());
   }
 
@@ -36,7 +37,7 @@ export default function SignupPage() {
     const terms = data.get("terms") === "on";
     const birthYear = Number(data.get("birthYear") || 0);
     if (!birthYear) {
-      showError("Please choose your birth year.");
+      showError({ text: "Please choose your birth year." });
       return;
     }
     if (isUnderMinAge(birthYear)) {
@@ -45,20 +46,20 @@ export default function SignupPage() {
       return;
     }
     if (!terms) {
-      showError("Please agree to the Terms to continue.");
+      showError({ text: "Please agree to the Terms to continue." });
       return;
     }
     if (password.length < 8) {
-      showError("Password must be at least 8 characters.");
+      showError({ kind: "weak-password" });
       return;
     }
-    setError("");
+    setError(null);
     setBusy(true);
     let result: Awaited<ReturnType<typeof signup>>;
     try {
       result = await signup(email, password, name, birthYear);
     } catch {
-      result = { user: null, error: "We couldn’t reach Hearth just now. Check your connection and try again." };
+      result = { user: null, errorKind: "unknown" };
     }
     setBusy(false);
     if (result.ageBlocked) {
@@ -71,13 +72,28 @@ export default function SignupPage() {
       return;
     }
     if (!result.user) {
-      showError(result.error || "Something went wrong on our side. Try again in a moment.");
+      showError({ kind: result.errorKind ?? "unknown" });
       return;
     }
     router.push("/welcome");
   }
 
   if (blocked) return <AgeBlockedScreen />;
+
+  if (checkEmail) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream-100 px-6 py-12">
+        <div className="w-full max-w-md text-center">
+          <div className="mb-8 flex justify-center"><Logo /></div>
+          <h1 className="font-display text-4xl text-ink-900">Check your inbox</h1>
+          <p className="mt-3 text-ink-600">We sent a link to {checkEmail}.</p>
+          <div className="mt-6">
+            <ResendLink email={checkEmail} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -182,11 +198,6 @@ export default function SignupPage() {
                 I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and I’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
               </span>
             </label>
-            {checkEmail && (
-              <p className="rounded-2xl bg-cream-200 px-4 py-3 text-sm text-ink-700">
-                Almost in — we sent a confirmation link to {checkEmail}. Open it to finish setting up.
-              </p>
-            )}
             <Button
               id="signup-submit"
               type="submit"
@@ -195,23 +206,12 @@ export default function SignupPage() {
               aria-busy={busy}
             >
               {busy ? (
-                <span className="inline-flex items-center justify-center gap-2">
-                  <span
-                    aria-hidden
-                    className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100"
-                  />
-                  Settling you in…
-                </span>
+                <AuthBusyLabel label="Settling you in…" />
               ) : (
                 "Create account"
               )}
             </Button>
-            {error && (
-              <p role="alert" className="flex items-start gap-2 text-sm text-ink-700">
-                <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-ember-glow" />
-                <span>{error}</span>
-              </p>
-            )}
+            {error && <AuthError kind={error.kind} fallback={error.text} />}
           </form>
           <p className="mt-4 text-center text-xs text-ink-500">
             Free · No spam · You can delete anytime
