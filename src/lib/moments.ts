@@ -47,7 +47,7 @@ function rowToPost(row: MomentRow, urls: Record<string, string> = {}): Post {
 }
 
 const SELECT =
-  "id, author_id, body, visibility, is_demo, created_at, media_path, media_type, author:profiles(name, handle)";
+  "id, author_id, body, visibility, is_demo, created_at, media_path, media_type, author:profiles!moments_author_id_fkey(name, handle)";
 
 async function withUrls(rows: MomentRow[]): Promise<Post[]> {
   const urls = await signMediaPaths(rows.map((r) => r.media_path).filter((p): p is string => Boolean(p)));

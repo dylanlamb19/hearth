@@ -64,7 +64,7 @@ export async function listReactions(momentId: string, userId?: string): Promise<
   }
   const { data, error } = await sb
     .from("reactions")
-    .select("user_id, kind, created_at, profile:profiles(name)")
+    .select("user_id, kind, created_at, profile:profiles!reactions_user_id_fkey(name)")
     .eq("moment_id", momentId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);

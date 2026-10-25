@@ -40,7 +40,7 @@ export default async function AdminReportsPage() {
     admin
       .from("reports")
       .select(
-        "id, moment_id, reported_user_id, reported:profiles!reports_reported_user_id_fkey(name, handle), reporter_id, reason, note, needs_account_review, created_at, moment:moments(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
+        "id, moment_id, reported_user_id, reported:profiles!reports_reported_user_id_fkey(name, handle), reporter_id, reason, note, needs_account_review, created_at, moment:moments!reports_moment_id_fkey(body, author_id, hidden_pending_review), comment_id, comment:comments(body, author_id, hidden_pending_review, deleted_at)",
       )
       .eq("status", "open")
       .eq("reporter_blocked", false)
@@ -49,12 +49,19 @@ export default async function AdminReportsPage() {
       .limit(200),
     admin
       .from("flagged_accounts")
-      .select("user_id, reason, last_flagged_at, profile:profiles(name, handle)")
+      .select("user_id, reason, last_flagged_at")
       .eq("status", "open")
       .order("last_flagged_at", { ascending: true }),
   ]);
   const reports = (reportData ?? []) as unknown as ReportRow[];
-  const flagged = (flaggedData ?? []) as unknown as FlaggedRow[];
+  // flagged_accounts.user_id references auth.users, not profiles, so there's no FK to embed
+  // through. Look the names up separately.
+  const flaggedRaw = (flaggedData ?? []) as unknown as Omit<FlaggedRow, "profile">[];
+  const { data: flaggedProfiles } = flaggedRaw.length
+    ? await admin.from("profiles").select("id, name, handle").in("id", flaggedRaw.map((f) => f.user_id))
+    : { data: [] as { id: string; name: string | null; handle: string | null }[] };
+  const profileById = new Map((flaggedProfiles ?? []).map((p) => [p.id, { name: p.name, handle: p.handle }]));
+  const flagged: FlaggedRow[] = flaggedRaw.map((f) => ({ ...f, profile: profileById.get(f.user_id) ?? null }));
   const flaggedIds = new Set(flagged.map((f) => f.user_id));
 
   return (

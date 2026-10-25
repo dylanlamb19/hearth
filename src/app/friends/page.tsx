@@ -67,6 +67,9 @@ export default function FriendsPage() {
     };
   }, [user, showToast]);
 
+  // The pill counts only knocks still waiting: a row fading out after Let in no longer counts.
+  const waitingCount = incoming.filter((k) => !welcomed[k.id]).length;
+
   async function answer(knock: Knock, accept: boolean) {
     if (!user) return;
     const before = incoming;
@@ -92,6 +95,16 @@ export default function FriendsPage() {
           });
         }, 2000);
       }
+      // Re-read the door from the server so the list and count can't go stale.
+      listIncoming(user.id)
+        .then((fresh) =>
+          // Keep the just-let-in row for its fade; everything else comes from the server.
+          setIncoming((list) => {
+            const fading = accept ? list.filter((k) => k.id === knock.id) : [];
+            return [...fading, ...fresh.filter((k) => k.id !== knock.id)];
+          }),
+        )
+        .catch(() => {});
     } catch (e) {
       setIncoming(before);
       setWelcomed((w) => {
@@ -151,9 +164,9 @@ export default function FriendsPage() {
           className="mb-3 flex items-center gap-2 font-display text-xl text-ink-900"
         >
           At the door
-          {incoming.length > 0 && (
+          {waitingCount > 0 && (
             <span className="rounded-full bg-ember-100 px-2 py-0.5 text-xs font-medium text-ember-700">
-              {incoming.length}
+              {waitingCount}
             </span>
           )}
         </h2>
