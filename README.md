@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Sign in with any email to explore the demo.
+Open http://localhost:3000. Without Supabase keys (see `.env.example` and `SUPABASE_SETUP.md`), sign in as `ember@hearth.demo` to explore the demo.
 
 ## What's next
 

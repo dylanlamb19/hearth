@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Avatar name={user.name} />
         <div className="min-w-0">
           <p className="truncate font-medium text-ink-900">{user.name}</p>
-          <p className="truncate text-xs text-ink-400">@{user.handle}</p>
+          {user.handle && <p className="truncate text-xs text-ink-400">@{user.handle}</p>}
         </div>
       </div>
       {nav.map((item) => {

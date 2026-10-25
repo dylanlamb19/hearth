@@ -4,18 +4,30 @@ import Link from "next/link";
 import { Ban, Bell, Flag, Plus, Settings, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { useAvatarSrc } from "@/lib/avatar";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { ReportMenu } from "@/components/ReportMenu";
 import { PostCard } from "@/components/PostCard";
 import { useAuth } from "@/components/AuthProvider";
 import { posts } from "@/data/seed";
+import { useEffect, useState } from "react";
+import { followCounts, type FollowCounts } from "@/lib/follows";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const avatarSrc = useAvatarSrc(user?.id);
   const mine = posts.filter((p) => p.authorId === user?.id);
   // This route is the signed-in user's own profile.
   const isOwnProfile = Boolean(user);
+  const [counts, setCounts] = useState<FollowCounts | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    followCounts(user.id, user.followingIds ?? [])
+      .then(setCounts)
+      .catch(() => setCounts(null));
+  }, [user]);
 
   return (
     <AppShell>
@@ -25,11 +37,17 @@ export default function ProfilePage() {
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
               <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={user?.name || "You"} size="xl" />
+                <Avatar name={user?.name || "You"} size="xl" src={avatarSrc} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>
-                <p className="text-sm text-ink-500">@{user?.handle}</p>
+                {user?.handle && <p className="text-sm text-ink-500">@{user.handle}</p>}
+                {counts && (
+                  <p className="mt-1 text-xs text-ink-500">
+                    <span className="font-medium text-ink-800">{counts.followers}</span> followers ·{" "}
+                    <span className="font-medium text-ink-800">{counts.following}</span> following
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -76,7 +94,7 @@ export default function ProfilePage() {
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-ink-800">Blocked list</span>
                       <span className="block text-xs text-ink-500">
-                        See who you’ve blocked — unblock anytime on this device.
+                        See who you’ve blocked — unblock anytime.
                       </span>
                     </span>
                   </span>

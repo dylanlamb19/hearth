@@ -12,6 +12,7 @@ export function PublicFooter() {
           <Link href="/pricing" className="hover:text-ink-800">Pricing</Link>
           <Link href="/terms" className="hover:text-ink-800">Terms</Link>
           <Link href="/privacy" className="hover:text-ink-800">Privacy</Link>
+          <Link href="/dmca" className="hover:text-ink-800">DMCA</Link>
         </div>
         <p className="text-xs text-ink-400">A quieter social network for people you already know.</p>
       </div>

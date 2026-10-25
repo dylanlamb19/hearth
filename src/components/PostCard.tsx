@@ -1,22 +1,60 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Heart, MessageCircle, Share2, Bookmark, Globe2, Users } from "lucide-react";
+import { MessageCircle, Share2, Bookmark, DoorOpen, Users, MoreHorizontal } from "lucide-react";
 import { Post, personById, reactionsForPost } from "@/data/seed";
 import { Avatar } from "./Avatar";
 import { ReportMenu } from "./ReportMenu";
 import { ReactionsSheet } from "./ReactionsSheet";
 import { useAuth } from "./AuthProvider";
+import { CommentsSection } from "./CommentsSection";
+import { listReactions, setReaction, type Reaction, type ReactionKind } from "@/lib/social";
+import { ReactionPicker } from "./ReactionPicker";
+import { ReactionIcon } from "./icons/reactions";
 
 function isLocalMediaUrl(src: string) {
   return src.startsWith("blob:") || src.startsWith("data:");
 }
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({
+  post,
+  onEdit,
+  onDelete,
+  onReported,
+}: {
+  post: Post;
+  /** Called after you report this Moment, so the feed can hide it. */
+  onReported?: (id: string) => void;
+  /** Shown in your own Moment's menu when provided. */
+  onEdit?: (id: string, body: string) => void;
+  onDelete?: (id: string) => void;
+}) {
   const { user } = useAuth();
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState(post.body);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.comments);
+  const [stored, setStored] = useState<Reaction[]>([]);
+  // Stored Moments show the real count; sample posts keep their sample count plus local comments.
+  const onCommentCount = useCallback(
+    (n: number) => setCommentCount(/^[0-9a-f-]{36}$/i.test(post.id) ? n : post.comments + n),
+    [post.id, post.comments],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    listReactions(post.id, user?.id)
+      .then((list) => !cancelled && setStored(list))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, user?.id]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seedAuthor = personById(post.authorId);
   const author =
@@ -30,7 +68,10 @@ export function PostCard({ post }: { post: Post }) {
           mutuals: 0,
           online: true,
         }
-      : null);
+      : post.authorName
+        ? { id: post.authorId, name: post.authorName, handle: post.authorHandle || "", bio: "", mutuals: 0, online: false }
+        : null);
+  const isOwn = Boolean(user && post.authorId === user.id);
 
   useEffect(() => {
     return () => {
@@ -40,8 +81,39 @@ export function PostCard({ post }: { post: Post }) {
 
   if (!author) return null;
 
-  const reactions = reactionsForPost(post.id);
+  const seedReactions = reactionsForPost(post.id);
+  const mine = user ? stored.find((r) => r.userId === user.id)?.kind ?? null : null;
+  const reactions = [
+    ...seedReactions.filter((r) => !stored.some((s) => s.userId === r.personId)),
+    ...stored.map((r) => ({ kind: r.kind, personId: r.userId, name: r.name })),
+  ];
   const loveCount = reactions.length;
+  // Top 3 kinds by count, and "Maya and 4 others" (you first if you reacted).
+  const kindCounts = new Map<ReactionKind, number>();
+  reactions.forEach((r) => kindCounts.set(r.kind, (kindCounts.get(r.kind) ?? 0) + 1));
+  const topKinds = [...kindCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+  const firstName = mine
+    ? "You"
+    : (() => {
+        const r = reactions[0];
+        return r ? personById(r.personId)?.name.split(" ")[0] ?? r.name?.split(" ")[0] ?? "Someone" : "";
+      })();
+  const others = loveCount - 1;
+  const summaryText = others > 0 ? `${firstName} and ${others} ${others === 1 ? "other" : "others"}` : firstName;
+
+  async function react(kind: ReactionKind | null) {
+    if (!user) return;
+    const prev = stored;
+    setStored((list) => [...list.filter((r) => r.userId !== user.id), ...(kind ? [{ userId: user.id, kind }] : [])]);
+    try {
+      await setReaction(post.id, user.id, kind);
+    } catch (e) {
+      // Only this card's reactions roll back.
+      setStored(prev);
+      showToast((e as Error).message);
+    }
+  }
+
 
   function showToast(message: string) {
     setToast(message);
@@ -72,12 +144,69 @@ export function PostCard({ post }: { post: Post }) {
             <p className="flex items-center gap-1 text-xs text-ink-400">
               {post.createdAt}
               <span aria-hidden>·</span>
-              {post.privacy === "public" ? <Globe2 className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+              {post.privacy === "everyone" ? (
+                <span title="Everyone" className="inline-flex">
+                  <DoorOpen className="h-3.5 w-3.5" aria-label="Everyone" />
+                </span>
+              ) : (
+                <span title="Friends" className="inline-flex">
+                  <Users className="h-3.5 w-3.5" aria-label="Friends" />
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <ReportMenu subject={author.name} subjectId={author.id} />
+        {isOwn && (onEdit || onDelete) ? (
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Moment options"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
+              className="rounded-full p-2 text-ink-400 hover:bg-cream-100 hover:text-ink-700"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-2xl border border-ink-100 bg-white py-1 text-sm shadow-soft">
+                {onEdit && (
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-ink-700 hover:bg-cream-50"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setEditDraft(post.body);
+                      setEditing(true);
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-ink-700 hover:bg-cream-50"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setConfirmDelete(true);
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <ReportMenu subject={author.name} subjectId={author.id} itemId={post.id} onReported={onReported} />
+        )}
       </div>
+
+      {post.video && (
+        <div className="mt-4 overflow-hidden rounded-2xl bg-ink-900">
+          <video src={post.video} controls playsInline preload="metadata" className="max-h-[70vh] w-full" />
+        </div>
+      )}
 
       {post.image && (
         <div className="relative mt-4 aspect-[16/10] overflow-hidden rounded-2xl bg-cream-200">
@@ -91,19 +220,85 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       )}
 
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-800">{post.body}</p>
+      {editing ? (
+        <form
+          className="mt-4 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const body = editDraft.trim();
+            if (!body) return;
+            onEdit?.(post.id, body);
+            setEditing(false);
+          }}
+        >
+          <textarea
+            aria-label="Edit Moment"
+            value={editDraft}
+            onChange={(e) => setEditDraft(e.target.value)}
+            rows={3}
+            className="w-full rounded-2xl border-ink-200 bg-cream-50 px-4 py-3 text-[15px] focus:border-ember-400 focus:ring-ember-300"
+          />
+          <div className="flex justify-end gap-2 text-sm">
+            <button type="button" onClick={() => setEditing(false)} className="rounded-full px-3 py-1.5 text-ink-500 hover:bg-cream-100">
+              Cancel
+            </button>
+            <button type="submit" className="rounded-full bg-hearth px-4 py-1.5 font-medium text-white">
+              Save
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="mt-4 text-[15px] leading-relaxed text-ink-800">{post.body}</p>
+      )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-1 text-sm text-ink-500">
+      {confirmDelete && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cream-100 px-4 py-3 text-sm text-ink-700">
+          <span>Delete this Moment? It’ll be gone for everyone.</span>
+          <span className="flex gap-2">
+            <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-full px-3 py-1.5 hover:bg-cream-200">
+              Keep
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDelete(false);
+                onDelete?.(post.id);
+              }}
+              className="rounded-full px-3 py-1.5 text-ink-500 hover:bg-cream-200 hover:text-ink-800"
+            >
+              Delete
+            </button>
+          </span>
+        </div>
+      )}
+
+      {loveCount > 0 && (
         <button
           type="button"
-          aria-label={`View ${loveCount} reactions`}
           onClick={() => setReactionsOpen(true)}
+          className="mt-3 flex items-center gap-2 rounded-full text-xs text-ink-500 hover:text-ink-800"
+          aria-label={`${summaryText}. View reactions.`}
+        >
+          <span className="flex -space-x-1" aria-hidden>
+            {topKinds.map((k) => (
+              <span key={k} className="grid h-5 w-5 place-items-center rounded-full bg-ember-100 text-ember-glow ring-2 ring-white">
+                <ReactionIcon kind={k} className="h-4 w-4" />
+              </span>
+            ))}
+          </span>
+          <span>{summaryText}</span>
+        </button>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-1 text-sm text-ink-500">
+        <ReactionPicker mine={mine} count={loveCount} onReact={(k) => void react(k)} />
+        <button
+          type="button"
+          aria-expanded={commentsOpen}
+          onClick={() => setCommentsOpen((v) => !v)}
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100"
         >
-          <Heart className="h-4 w-4" /> Love · {loveCount}
-        </button>
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:bg-cream-100">
-          <MessageCircle className="h-4 w-4" /> Comment · {post.comments}
+          <MessageCircle className="h-4 w-4" /> Comment · {commentCount}
         </button>
         <button
           type="button"
@@ -116,6 +311,8 @@ export function PostCard({ post }: { post: Post }) {
           <Bookmark className="h-4 w-4" /> Save
         </button>
       </div>
+
+      {commentsOpen && <CommentsSection momentId={post.id} momentAuthorId={post.authorId} onCount={onCommentCount} />}
 
       <ReactionsSheet
         open={reactionsOpen}

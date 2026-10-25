@@ -1,11 +1,17 @@
 "use client";
 
+import { announceBlocked } from "@/lib/blockedNow";
 import { useEffect, useState, type ReactNode } from "react";
-import { Flag, Ban, MoreHorizontal, X } from "lucide-react";
+import { Flag, Ban, MoreHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "./Button";
-import { addBlockedId } from "@/lib/blocked";
+import { blockPerson } from "@/lib/blocks";
+import { addReportedId } from "@/lib/reported";
+import { fileReport, reportUser } from "@/lib/reports";
 
 const REPORT_REASONS = [
+  "Nudity or sexual content",
+  "Private photo of me",
+  "Someone under 13",
   "Spam",
   "Harassment",
   "Hate",
@@ -23,10 +29,30 @@ type Sheet =
 export function ReportMenu({
   subject = "this",
   subjectId,
+  itemId,
+  parentMomentId,
+  onReported,
+  onDelete,
+  onBlocked,
+  reportPerson = false,
+  extraItems,
 }: {
   subject?: string;
   /** Stable id persisted to localStorage `hearth_blocked` on block. */
   subjectId?: string;
+  /** The reported item (e.g. a Moment id). Hidden for the reporter right after reporting. */
+  itemId?: string;
+  onReported?: (itemId: string) => void;
+  /** Set when reporting a comment: itemId is the comment, this is its Moment. */
+  parentMomentId?: string;
+  /** Adds a Delete entry (e.g. your own comment, or a comment on your Moment). */
+  onDelete?: () => void;
+  /** Called after a successful block (e.g. to drop a knock or friend from a list). */
+  onBlocked?: (id: string) => void;
+  /** Report the person (subjectId) itself via report_user, instead of a Moment/comment. */
+  reportPerson?: boolean;
+  /** Extra entries shown first (e.g. Unfriend). */
+  extraItems?: { label: string; icon?: ReactNode; onSelect: () => void }[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -52,23 +78,39 @@ export function ReportMenu({
 
   function confirmReport() {
     if (sheet?.kind !== "report" || !sheet.reason) return;
-    try {
-      console.info("[hearth report]", {
-        subject,
-        subjectId,
-        reason: sheet.reason,
-        note: sheet.note.trim() || undefined,
-      });
-    } catch {
-      /* ignore */
+    if (reportPerson && subjectId) {
+      const reason = sheet.reason;
+      const note = sheet.note.trim() || undefined;
+      reportUser({ userId: subjectId, reason, note })
+        .then(() => setSheet({ kind: "report-thanks" }))
+        .catch(() => setSheet({ kind: "report-thanks" }));
+      return;
+    }
+    // Saved to Supabase when configured (insert-only); always hidden locally right away.
+    void fileReport({
+      momentId: parentMomentId ?? itemId,
+      commentId: parentMomentId ? itemId : undefined,
+      reason: sheet.reason,
+      note: sheet.note.trim() || undefined,
+    });
+    if (itemId) {
+      addReportedId(itemId);
+      onReported?.(itemId);
     }
     setSheet({ kind: "report-thanks" });
   }
 
   function confirmBlock() {
     const id = (subjectId ?? subject).trim();
-    if (id) addBlockedId(id);
-    setSheet({ kind: "block-done" });
+    if (!id) return;
+    // No notification goes to the blocked person.
+    blockPerson(id, subject)
+      .then(() => {
+        onBlocked?.(id);
+        announceBlocked(id);
+        setSheet({ kind: "block-done" });
+      })
+      .catch(() => setSheet(null));
   }
 
   return (
@@ -85,6 +127,19 @@ export function ReportMenu({
 
       {menuOpen && (
         <div className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-2xl border border-ink-100 bg-cream-50 shadow-card">
+          {extraItems?.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink-700 hover:bg-cream-100"
+              onClick={() => {
+                setMenuOpen(false);
+                item.onSelect();
+              }}
+            >
+              {item.icon} {item.label}
+            </button>
+          ))}
           <button
             type="button"
             className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink-700 hover:bg-cream-100"
@@ -99,6 +154,18 @@ export function ReportMenu({
           >
             <Ban className="h-4 w-4 text-ink-500" /> Block
           </button>
+          {onDelete && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink-700 hover:bg-cream-100"
+              onClick={() => {
+                setMenuOpen(false);
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-ink-500" /> Delete
+            </button>
+          )}
         </div>
       )}
 
@@ -172,7 +239,7 @@ export function ReportMenu({
       {sheet?.kind === "block-confirm" && (
         <CreamSheet
           title={`Block ${subject}?`}
-          description={`Block ${subject}? They won’t show up in your feed or search.`}
+          description={`Block ${subject}? They won’t show up in your feed or search, and you’ll no longer be friends.`}
           onClose={() => setSheet(null)}
         >
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
@@ -192,7 +259,7 @@ export function ReportMenu({
 
       {sheet?.kind === "block-done" && (
         <CreamSheet title="Blocked" description="Blocked." onClose={() => setSheet(null)}>
-          <p className="mt-3 text-xs text-ink-400">They won’t show up in your feed or search on this device.</p>
+          <p className="mt-3 text-xs text-ink-400">They won’t show up in your feed or search.</p>
           <Button className="mt-5 w-full" onClick={() => setSheet(null)}>
             Done
           </Button>

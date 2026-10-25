@@ -2,34 +2,97 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { AuthBusyLabel, AuthError, ResendLink } from "@/components/AuthStates";
+import type { AuthErrorKind } from "@/lib/authErrors";
+import { birthYearOptions, isUnderMinAge, setAgeBlocked } from "@/lib/age";
+import { AgeBlockedScreen, useAgeBlocked } from "@/components/AgeBlocked";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
+import { cn } from "@/lib/utils";
 
 export default function SignupPage() {
-  const { login } = useAuth();
+  const { signup } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState("");
+  const [blocked, setBlocked] = useAgeBlocked();
+  const [error, setError] = useState<{ kind?: AuthErrorKind; text?: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [checkEmail, setCheckEmail] = useState("");
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  /** Inline error under the button; form values stay put and focus returns to the button. */
+  function showError(next: { kind?: AuthErrorKind; text?: string }) {
+    setError(next);
+    requestAnimationFrame(() => document.getElementById("signup-submit")?.focus());
+  }
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy) return;
     const data = new FormData(e.currentTarget);
     const name = String(data.get("name") || "");
     const email = String(data.get("email") || "");
     const password = String(data.get("password") || "");
     const terms = data.get("terms") === "on";
+    const birthYear = Number(data.get("birthYear") || 0);
+    if (!birthYear) {
+      showError({ text: "Please choose your birth year." });
+      return;
+    }
+    if (isUnderMinAge(birthYear)) {
+      setAgeBlocked();
+      setBlocked(true);
+      return;
+    }
     if (!terms) {
-      setError("Please agree to the Terms to continue.");
+      showError({ text: "Please agree to the Terms to continue." });
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      showError({ kind: "weak-password" });
       return;
     }
-    login(email, password, name);
+    setError(null);
+    setBusy(true);
+    let result: Awaited<ReturnType<typeof signup>>;
+    try {
+      result = await signup(email, password, name, birthYear);
+    } catch {
+      result = { user: null, errorKind: "unknown" };
+    }
+    setBusy(false);
+    if (result.ageBlocked) {
+      setAgeBlocked();
+      setBlocked(true);
+      return;
+    }
+    if (result.needsEmailConfirm) {
+      setCheckEmail(email);
+      return;
+    }
+    if (!result.user) {
+      showError({ kind: result.errorKind ?? "unknown" });
+      return;
+    }
     router.push("/welcome");
+  }
+
+  if (blocked) return <AgeBlockedScreen />;
+
+  if (checkEmail) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream-100 px-6 py-12">
+        <div className="w-full max-w-md text-center">
+          <div className="mb-8 flex justify-center"><Logo /></div>
+          <h1 className="font-display text-4xl text-ink-900">Check your inbox</h1>
+          <p className="mt-3 text-ink-600">We sent a link to {checkEmail}.</p>
+          <div className="mt-6">
+            <ResendLink email={checkEmail} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -110,14 +173,45 @@ export default function SignupPage() {
                 At least 8 characters. Longer is stronger — mix letters, numbers, and a symbol if you can.
               </span>
             </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block text-ink-600">Birth year</span>
+              <select
+                name="birthYear"
+                required
+                defaultValue=""
+                className="w-full rounded-2xl border-ink-200 bg-white px-4 py-3 shadow-sm focus:border-ember-400 focus:ring-ember-300"
+              >
+                <option value="" disabled>
+                  Choose a year
+                </option>
+                {birthYearOptions().map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1.5 block text-xs text-ink-400">We keep only the year.</span>
+            </label>
             <label className="flex items-start gap-3 text-sm text-ink-600">
               <input name="terms" type="checkbox" className="mt-1 rounded border-ink-300 text-hearth focus:ring-ember-300" />
               <span>
-                I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link> and have read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice.
+                I agree to the <Link href="/terms" className="underline underline-offset-2">Terms</Link>, and I’ve read the <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice and <Link href="/dmca" className="underline underline-offset-2">DMCA</Link> policy.
               </span>
             </label>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full">Create account</Button>
+            <Button
+              id="signup-submit"
+              type="submit"
+              className={cn("w-full", busy && "disabled:opacity-80")}
+              disabled={busy}
+              aria-busy={busy}
+            >
+              {busy ? (
+                <AuthBusyLabel label="Settling you in…" />
+              ) : (
+                "Create account"
+              )}
+            </Button>
+            {error && <AuthError kind={error.kind} fallback={error.text} />}
           </form>
           <p className="mt-4 text-center text-xs text-ink-500">
             Free · No spam · You can delete anytime
@@ -126,6 +220,8 @@ export default function SignupPage() {
             <Link href="/terms" className="underline underline-offset-2 hover:text-ink-700">Terms</Link>
             {" · "}
             <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-700">Privacy</Link>
+            {" · "}
+            <Link href="/dmca" className="underline underline-offset-2 hover:text-ink-700">DMCA</Link>
           </p>
           <p className="mt-6 text-sm text-ink-500">
             Already here? <Link href="/login" className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>

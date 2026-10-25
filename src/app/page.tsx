@@ -2,13 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
-import { Button } from "@/components/Button";
 
 const features = [
   { title: "A quieter feed", body: "Posts, photos, video, and comments from people you actually chose." },
-  { title: "Moments", body: "Photos that last a day. Enough time to see them, not enough to archive them." },
+  { title: "Moments", body: "Share a thought or a photo with the people in your room." },
   { title: "Friends, for real", body: "Requests, suggestions, and a contacts list that stays on the side of the room." },
-  { title: "Chat", body: "One-to-one messages. No rooms, no noise." },
+  { title: "Letters", body: "One-to-one messages. No rooms, no noise." },
   { title: "Groups & events", body: "Cooking clubs, trail notes, listening rooms. RSVP and show up." },
   { title: "Market", body: "Bikes, skillets, stools, cuttings. Local and priced in dollars." },
 ];
@@ -23,46 +22,36 @@ export default function LandingPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">A social network</p>
             <h1 className="mt-4 font-display text-5xl leading-tight text-ink-900 sm:text-6xl">Gather around.</h1>
             <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-600">
-              Hearth is a place for the people you already know — feed, friends, chat, groups, events, market, videos, and the small talk in between.
+              A quieter place for the people you&rsquo;d invite over.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                className="cursor-not-allowed opacity-60"
-                disabled
-                aria-disabled="true"
-                title="Coming soon"
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:items-start">
+              <Link
+                href="/signup"
+                className="w-full rounded-full bg-ember-glow px-6 py-3 text-center font-medium text-white transition hover:bg-ember-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-300 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-100 sm:w-auto"
               >
-                Google · Coming soon
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="cursor-not-allowed opacity-60"
-                disabled
-                aria-disabled="true"
-                title="Coming soon"
+                Create your account
+              </Link>
+              <Link
+                href="/login"
+                className="text-center text-sm text-ink-600 underline-offset-2 hover:underline focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ember-300 sm:text-left"
               >
-                X · Coming soon
-              </Button>
-              <Button href="/signup" variant="outline">Email instead</Button>
+                I already have an account
+              </Link>
+              <p className="text-center text-xs text-ink-500 sm:text-left">Google and X sign-in coming soon.</p>
             </div>
-            <p className="mt-3 text-sm text-ink-500">
-              Google and X are warming up — email works today.
-            </p>
-            <p className="mt-4 text-sm text-ink-500">
-              Already here? <Link href="/login" className="font-medium text-ink-800 underline-offset-2 hover:underline">Sign in</Link>
-            </p>
           </div>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-cream-300 shadow-soft">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] bg-cream-300 shadow-soft">
+            {/*
+              Photo: "Cozy living room with fireplace and two armchairs" by Clay Banks (@claybanks),
+              https://unsplash.com/photos/lNai4YWMFMc. Free under the Unsplash License
+              (https://unsplash.com/license); attribution not required. Cropped to 4:3, WebP.
+            */}
             <Image
-              src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=1400&q=80"
-              alt="A cozy picnic spread on linen in the grass"
+              src="/landing/hearth-living-room.webp"
+              alt="A lamp-lit living room with a fire burning in a stone fireplace, two patterned armchairs and a wooden coffee table with flowers"
               fill
               className="object-cover"
               priority
-              unoptimized
               sizes="(max-width:1024px) 100vw, 50vw"
             />
           </div>
