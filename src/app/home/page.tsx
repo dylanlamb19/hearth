@@ -33,6 +33,14 @@ import {
 } from "@/lib/media";
 import { getReportedIds } from "@/lib/reported";
 import { cn } from "@/lib/utils";
+import {
+  dismissNudge,
+  getLocalAvatar,
+  pickPrompt,
+  shouldNudge,
+  takeFirstMoment,
+  updateProgress,
+} from "@/lib/settleIn";
 
 const tabs: { value: FeedTab; label: string }[] = [
   { value: "all", label: "All" },
@@ -80,7 +88,6 @@ function demoFeed(
   }
   return [...top, ...list.map((p) => ({ ...p, fromYourPeople: false }))];
 }
-const FIRST_MOMENT_PLACEHOLDER = "What's happening by the hearth?";
 
 function HearthMark({ className }: { className?: string }) {
   return (
@@ -155,6 +162,21 @@ export default function HomePage() {
   const [feed, setFeed] = useState<Post[]>(seedPosts);
   const [toast, setToast] = useState<string | null>(null);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
+  // Settle in: the Moment just shared on /welcome shows on top, once.
+  const [firstMoment, setFirstMomentPost] = useState<Post | null>(null);
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [nudge, setNudge] = useState(false);
+  const [composePrompt] = useState(() => pickPrompt());
+
+  useEffect(() => {
+    if (!user) return;
+    setAvatarSrc(getLocalAvatar(user.id));
+    setNudge(shouldNudge(user.id, user.onboardingCompletedAt));
+    const m = takeFirstMoment();
+    if (m && m.authorId === user.id) {
+      setFirstMomentPost({ ...m, createdAt: "Just now", loves: 0, comments: 0 });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -183,9 +205,18 @@ export default function HomePage() {
   // Reported Moments disappear right away for the reporter (this device).
   // The device-only block list only applies in demo mode; with real keys the server
   // (can_see_moment) already drops anything across a block.
+  // The stored copy (with counts and media) wins over the /welcome handoff once the feed has it.
+  const topPost = firstMoment ? (feed.find((p) => p.id === firstMoment.id) ?? firstMoment) : null;
   const visibleFeed = feed.filter(
-    (post) => (mode === "supabase" || !blockedIds.has(post.authorId)) && !reportedIds.includes(post.id),
+    (post) =>
+      (mode === "supabase" || !blockedIds.has(post.authorId)) &&
+      !reportedIds.includes(post.id) &&
+      post.id !== topPost?.id,
   );
+  const nudgePost = nudge ? visibleFeed.find((p) => p.authorId !== user?.id) : undefined;
+  const nudgeName = nudgePost
+    ? (nudgePost.authorName ?? people.find((p) => p.id === nudgePost.authorId)?.name ?? "A friend").split(" ")[0]
+    : "";
   const birthdays = people.filter((p) => p.birthday && !blockedIds.has(p.id));
   const suggestions = people
     .filter(
@@ -350,6 +381,7 @@ export default function HomePage() {
     if (mode !== "supabase") setDemoPosts((prev) => [next, ...prev]);
     else setFeed((prev) => [next, ...prev]);
     setDraft("");
+    updateProgress(user.id, { moment: true });
     // Keep a local object URL alive for the feed card; only clear composer state.
     if (next.image === attachment?.url || next.video === attachment?.url)
       setAttachment(null);
@@ -370,7 +402,7 @@ export default function HomePage() {
 
   function renderCard(post: Post, slot: "pin" | "list") {
     return (
-      <div key={`${slot}-${post.id}`} ref={seenRef(post.id)}>
+      <div key={`${slot}-${post.id}`} ref={seenRef(post.id)} data-moment={post.id}>
         <PostCard
           post={post}
           onEdit={async (id, body) => {
@@ -426,9 +458,37 @@ export default function HomePage() {
         <div className="space-y-4">
           <OnboardingChecklist />
 
+          {nudgePost && user && (
+            <section className="flex items-center gap-3 rounded-3xl bg-cream-50 p-4 ring-1 ring-cream-200">
+              <p className="flex-1 text-sm text-ink-700">{nudgeName} shared a Moment — say hi?</p>
+              <button
+                type="button"
+                onClick={() => {
+                  document.querySelector(`[data-moment="${nudgePost.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  dismissNudge(user.id);
+                  setNudge(false);
+                }}
+                className="rounded-full px-3 py-1.5 text-xs font-medium text-ember-700 ring-1 ring-ember-glow hover:bg-ember-50"
+              >
+                Say hi
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  dismissNudge(user.id);
+                  setNudge(false);
+                }}
+                className="rounded-full p-1.5 text-ink-400 hover:bg-cream-100 hover:text-ink-700"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </section>
+          )}
+
           <section className="rounded-3xl border border-ink-100 bg-white p-4 shadow-card">
             <div className="flex items-center gap-3">
-              <Avatar name={user?.name || "You"} />
+              <Avatar name={user?.name || "You"} src={avatarSrc} />
               <input
                 ref={composerRef}
                 value={draft}
@@ -440,7 +500,7 @@ export default function HomePage() {
                   }
                 }}
                 placeholder={
-                  compose ? FIRST_MOMENT_PLACEHOLDER : "What is on your mind?"
+                  compose ? composePrompt : "What is on your mind?"
                 }
                 className="w-full rounded-full border-0 bg-cream-100 px-4 py-3 text-sm placeholder:text-ink-400 focus:ring-2 focus:ring-ember-300"
                 aria-label="Compose a post"
@@ -587,7 +647,9 @@ export default function HomePage() {
             ))}
           </div>
 
-          {loaded && visibleFeed.length === 0 && (
+          {topPost && renderCard(topPost, "pin")}
+
+          {loaded && visibleFeed.length === 0 && !topPost && (
             <section className="flex flex-col items-center gap-3 rounded-2xl bg-cream-50 px-4 py-10 text-center ring-1 ring-cream-200">
               <HearthDrawing lit={false} />
               <p className="text-sm font-medium text-ink-700">

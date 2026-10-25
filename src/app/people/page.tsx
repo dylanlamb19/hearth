@@ -12,6 +12,7 @@ import { people as samplePeople, type Person } from "@/data/seed";
 import { listBlockedIds } from "@/lib/blocks";
 import { follow, listFollowingIds, listPeople, unfollow } from "@/lib/follows";
 import { ReportMenu } from "@/components/ReportMenu";
+import { getProgress, updateProgress } from "@/lib/settleIn";
 import { cancelKnock, listFriends, listOutgoing, sendKnock, type Knock } from "@/lib/knocks";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,8 @@ function PeoplePageContent() {
     setError(null);
     try {
       await sendKnock(user.id, { id: p.id, name: p.name, handle: p.handle });
+      const prog = getProgress(user.id);
+      if (!prog.knocked.includes(p.id)) updateProgress(user.id, { knocked: [...prog.knocked, p.id] });
       // A mutual knock makes you friends straight away; otherwise pick up the knock id.
       const [out, fr] = await Promise.all([listOutgoing(user.id), listFriends(user.id)]);
       setFriendIds(Object.fromEntries(fr.map((f) => [f.id, true])));

@@ -2,29 +2,50 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { markFindPeoplePending } from "@/lib/notificationPermission";
+import { useAuth } from "./AuthProvider";
 import { InviteSheet } from "./InviteSheet";
+import { PEOPLE_GOAL, getProgress, stepDone, type SettleProgress, type SettleStep } from "@/lib/settleIn";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "hearth_checklist";
 
-const items = [
-  { href: "/profile", label: "Finish profile" },
-  { href: "/people", label: "Find people", notifyPending: true },
-  { href: "/home?compose=1", label: "Share a first Moment" },
-] as const;
+/** Mirrors the 3 Settle-in steps from /welcome until all are done, then goes away for good. */
+const items: { step: SettleStep; href: string; label: string; notifyPending?: boolean }[] = [
+  { step: "photo", href: "/welcome", label: "Add a photo" },
+  { step: "people", href: "/people", label: `Knock on ${PEOPLE_GOAL} doors`, notifyPending: true },
+  { step: "moment", href: "/home?compose=1", label: "Share a first Moment" },
+];
 
 export function OnboardingChecklist() {
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState<SettleProgress | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      setVisible(localStorage.getItem(STORAGE_KEY) === "1");
-    } catch {
-      setVisible(false);
-    }
-  }, []);
+    if (!user) return;
+    const read = () => {
+      const p = getProgress(user.id);
+      setProgress(p);
+      let flagged = false;
+      try {
+        flagged = localStorage.getItem(STORAGE_KEY) === "1";
+        if (p.done) localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      setVisible(flagged && !p.done);
+    };
+    read();
+    window.addEventListener("hearth:settle-in", read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener("hearth:settle-in", read);
+      window.removeEventListener("storage", read);
+    };
+  }, [user]);
 
   function dismiss() {
     try {
@@ -35,7 +56,8 @@ export function OnboardingChecklist() {
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (!visible || !progress) return null;
+  const doneCount = items.filter((i) => stepDone(progress, i.step)).length;
 
   return (
     <>
@@ -43,7 +65,7 @@ export function OnboardingChecklist() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-xl text-ink-900">Settle in</h2>
-            <p className="mt-1 text-sm text-ink-500">A few gentle next steps whenever you are ready.</p>
+            <p className="mt-1 text-sm text-ink-500">{doneCount} of 3 · whenever you’re ready.</p>
           </div>
           <button
             type="button"
@@ -55,22 +77,36 @@ export function OnboardingChecklist() {
           </button>
         </div>
         <ul className="mt-4 space-y-2">
-          {items.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                onClick={() => {
-                  if ("notifyPending" in item && item.notifyPending) {
-                    markFindPeoplePending();
-                  }
-                }}
-                className="flex items-center justify-between rounded-2xl bg-cream-50 px-3 py-2.5 text-sm text-ink-800 ring-1 ring-ink-100 transition hover:bg-cream-100 hover:ring-ember-200"
-              >
-                <span>{item.label}</span>
-                <span className="text-xs text-ink-400">Open</span>
-              </Link>
-            </li>
-          ))}
+          {items.map((item) => {
+            const done = stepDone(progress, item.step);
+            const label =
+              item.step === "people" && !done
+                ? `${item.label} (${progress.knocked.length}/${PEOPLE_GOAL})`
+                : item.label;
+            return (
+              <li key={item.step}>
+                {done ? (
+                  <div className="flex items-center justify-between rounded-2xl bg-cream-50 px-3 py-2.5 text-sm text-ink-400 ring-1 ring-ink-100">
+                    <span className="line-through decoration-ink-300">{item.label}</span>
+                    <Check className="h-4 w-4 text-ember-glow" aria-label="Done" />
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href}
+                    onClick={() => {
+                      if (item.notifyPending) markFindPeoplePending();
+                    }}
+                    className={cn(
+                      "flex items-center justify-between rounded-2xl bg-cream-50 px-3 py-2.5 text-sm text-ink-800 ring-1 ring-ink-100 transition hover:bg-cream-100 hover:ring-ember-200",
+                    )}
+                  >
+                    <span>{label}</span>
+                    <span className="text-xs text-ink-400">Open</span>
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
         <button
           type="button"
