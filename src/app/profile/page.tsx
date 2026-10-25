@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Ban, Bell, Flag, Plus, Settings, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { useAvatarSrc } from "@/lib/avatar";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { ReportMenu } from "@/components/ReportMenu";
@@ -15,6 +16,7 @@ import { followCounts, type FollowCounts } from "@/lib/follows";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const avatarSrc = useAvatarSrc(user?.id);
   const mine = posts.filter((p) => p.authorId === user?.id);
   // This route is the signed-in user's own profile.
   const isOwnProfile = Boolean(user);
@@ -35,7 +37,7 @@ export default function ProfilePage() {
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
               <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={user?.name || "You"} size="xl" />
+                <Avatar name={user?.name || "You"} size="xl" src={avatarSrc} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>

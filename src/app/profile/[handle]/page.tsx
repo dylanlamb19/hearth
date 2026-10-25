@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { useAvatarSrc } from "@/lib/avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { PostCard } from "@/components/PostCard";
 import { ReportMenu } from "@/components/ReportMenu";
@@ -29,6 +30,7 @@ export default function PublicProfilePage() {
           bio: "Keeping the lights low and the kettle on. Friends-only by default. You decide who sits at this table.",
         }
       : null;
+  const avatarSrc = useAvatarSrc(profile?.id);
 
   if (!profile) {
     return (
@@ -55,7 +57,7 @@ export default function PublicProfilePage() {
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
               <div className="rounded-full bg-white p-1 shadow-soft">
-                <Avatar name={profile.name} size="xl" />
+                <Avatar name={profile.name} size="xl" src={avatarSrc} />
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{profile.name}</h1>
