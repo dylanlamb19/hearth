@@ -39,7 +39,7 @@ export default function ProfilePage() {
               </div>
               <div className="pb-1">
                 <h1 className="font-display text-3xl text-ink-900">{user?.name}</h1>
-                <p className="text-sm text-ink-500">@{user?.handle}</p>
+                {user?.handle && <p className="text-sm text-ink-500">@{user.handle}</p>}
                 {counts && (
                   <p className="mt-1 text-xs text-ink-500">
                     <span className="font-medium text-ink-800">{counts.followers}</span> followers ·{" "}

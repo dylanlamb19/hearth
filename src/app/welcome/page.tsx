@@ -33,7 +33,7 @@ function isHandleTaken(handle: string, selfId?: string) {
 }
 
 export default function WelcomePage() {
-  const { user, ready, completeOnboarding, updateUser, isHandleTaken: isHandleTakenRemote } = useAuth();
+  const { user, ready, completeOnboarding, updateUser, logout, isHandleTaken: isHandleTakenRemote } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [bio, setBio] = useState("");
@@ -136,9 +136,21 @@ export default function WelcomePage() {
       <div className="w-full max-w-md rounded-3xl border border-ink-100 bg-white p-6 shadow-card sm:p-8">
         <div className="mb-6 flex items-center justify-between gap-3">
           <Logo />
-          <button type="button" className="text-sm text-ink-500 hover:text-ink-800" onClick={() => finish()}>
-            Skip
-          </button>
+          <div className="flex items-center gap-4">
+            <button type="button" className="text-sm text-ink-500 hover:text-ink-800" onClick={() => finish()}>
+              Skip
+            </button>
+            <button
+              type="button"
+              className="text-sm text-ink-400 hover:text-ink-700"
+              onClick={() => {
+                logout();
+                router.replace("/login");
+              }}
+            >
+              Sign out
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 flex items-center justify-center gap-2" aria-label="Progress">

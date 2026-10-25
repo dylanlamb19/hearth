@@ -209,7 +209,7 @@ function PeoplePageContent() {
                 <Avatar name={p.name} online={p.online} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-ink-900">{p.name}</p>
-                  <p className="truncate text-xs text-ink-400">@{p.handle}</p>
+                  {p.handle && <p className="truncate text-xs text-ink-400">@{p.handle}</p>}
                 </div>
                 <Button
                   variant={isFollowing ? "secondary" : "primary"}
